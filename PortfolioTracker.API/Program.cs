@@ -83,8 +83,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI(options =>
     {
-        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Portfolio Tracker API V1");
-        options.RoutePrefix = string.Empty; // Set Swagger UI at app's root
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Portfolio Tracker API V1"); 
+        //options.RoutePrefix = string.Empty; // Set Swagger UI at app's root
     });
 }
 
