@@ -13,6 +13,8 @@ namespace PortfolioTracker.API.Controllers
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
     {
+        // todo: inject IUserService instead of using DbContext directly
+        // todo: keep controller thin
         private readonly ApplicationDbContext _context;
         private readonly ILogger<UsersController> _logger;
 
@@ -51,9 +53,12 @@ namespace PortfolioTracker.API.Controllers
         /// </summary>
         /// <param name="id">User ID</param>
         /// <returns>User details</returns>
+        // Adding constraint (guid) to the route parameter
+        [HttpGet("{id:guid}")]
+        [ProducesResponseType((StatusCodes.Status200OK))]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<ActionResult<User>> GetUser(Guid id)
-        {
-            _logger.LogInformation("Getting user with ID: {UserId}", id);
+        {            _logger.LogInformation("Getting user with ID: {UserId}", id);
 
             var user = await _context.Users
                 .AsNoTracking()
