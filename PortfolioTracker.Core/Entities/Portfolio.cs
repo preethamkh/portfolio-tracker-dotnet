@@ -14,7 +14,7 @@ namespace PortfolioTracker.Core.Entities
         public Guid Id { get; set; }
 
         /// <summary>
-        /// FK to User record who owns the portfolio
+        /// Foreign Key to User record who owns the portfolio
         /// </summary>
         [Required]
         public Guid UserId { get; set; }

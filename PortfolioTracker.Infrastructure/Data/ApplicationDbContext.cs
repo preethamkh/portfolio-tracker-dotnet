@@ -109,24 +109,172 @@ namespace PortfolioTracker.Infrastructure.Data
             ConfigureDefaults(modelBuilder);
         }
 
+        /// <summary>
+        /// Configures database indexes to improve query performance.
+        /// Indexes speed up SELECT queries but slow down INSERT/UPDATE.
+        /// Add indexes on columns frequently used in WHERE clauses.
+        /// </summary>
         private void ConfigureDefaults(ModelBuilder modelBuilder)
         {
-            throw new NotImplementedException();
+            // User indexes
+            modelBuilder.Entity<User>()
+                .HasIndex(u => u.Email)
+                .IsUnique()
+                .HasDatabaseName("ix_users_email");
+
+            // Portfolio indexes
+            modelBuilder.Entity<Portfolio>()
+                .HasIndex(p => p.UserId)
+                .HasDatabaseName("ix_portfolios_user_id");
+
+            modelBuilder.Entity<Portfolio>()
+                .HasIndex(p => new { p.UserId, p.IsDefault })
+                //.IsUnique()
+                .HasDatabaseName("ix_portfolios_user_default");
+
+            // Holding indexes
+            modelBuilder.Entity<Holding>()
+                .HasIndex(h => h.PortfolioId)
+                .HasDatabaseName("ix_holdings_portfolio_id");
+
+            modelBuilder.Entity<Holding>()
+                .HasIndex(h => h.SecurityId)
+                .HasDatabaseName("ix_holdings_security_id");
+
+            // PortfolioSnapshot indexes
+            modelBuilder.Entity<PortfolioSnapshot>()
+                .HasIndex(ps => ps.PortfolioId)
+                .HasDatabaseName("ix_snapshots_portfolio_id");
+
+            modelBuilder.Entity<PortfolioSnapshot>()
+                .HasIndex(ps => new { ps.PortfolioId, ps.SnapshotDate })
+                .HasDatabaseName("ix_snapshots_portfolio_date");
+        }
+
+        /// <summary>
+        /// Configures unique constraints to enforce data integrity.
+        /// Prevents duplicate records where they shouldn't exist.
+        /// </summary
+        private void ConfigureUniqueConstraints(ModelBuilder modelBuilder)
+        {
+            // Only one holding per security per portfolio
+            // todo: Q(curveball thinking): what if one had multiple HIN numbers - overkill for now / this project! (- keep it simple)
+            modelBuilder.Entity<Holding>()
+                .HasIndex(h => new { h.PortfolioId, h.SecurityId })
+                .IsUnique()
+                .HasDatabaseName("uq_holdings_portfolio_security");
+
+            // One only snapshot per portfolio per date
+            modelBuilder.Entity<PortfolioSnapshot>()
+                .HasIndex(ps => new {ps.PortfolioId, ps.SnapshotDate})
+                .IsUnique()
+                .HasDatabaseName("uq_snapshots_portfolio_date");
+
+            // Only one price record per security per date
+            // DECISION: Not considering intraday prices for now - changes the data model significantly
+            // todo: flesh out remaining entities
         }
 
         private void ConfigureRelationships(ModelBuilder modelBuilder)
         {
-            throw new NotImplementedException();
-        }
+            // User -> Portfolio (one-to-many)
+            modelBuilder.Entity<User>()
+                .HasMany(u => u.Portfolios)
+                .WithOne(p => p.User)
+                .HasForeignKey(p => p.UserId)
+                // Delete portfolios when user is deleted
+                .OnDelete(DeleteBehavior.Cascade);
 
-        private void ConfigureUniqueConstraints(ModelBuilder modelBuilder)
-        {
-            throw new NotImplementedException();
+            // Portfolio -> Holdings (One-to-Many)
+            modelBuilder.Entity<Portfolio>()
+                .HasMany(p => p.Holdings)
+                .WithOne(h => h.Portfolio)
+                .HasForeignKey(h => h.PortfolioId)
+                // Delete holdings when portfolio is deleted
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Portfolio -> Snapshots (One-to-Many)
+            modelBuilder.Entity<Portfolio>()
+                .HasMany(p => p.Snapshots)
+                .WithOne(s => s.Portfolio)
+                .HasForeignKey(s => s.PortfolioId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            //// Security -> Holdings (One-to-Many)
+            //modelBuilder.Entity<Security>()
+            //    .HasMany(s => s.Holdings)
+            //    .WithOne(h => h.Security)
+            //    .HasForeignKey(h => h.SecurityId)
+            //    .OnDelete(DeleteBehavior.Restrict); // Don't allow deleting security if holdings exist
+
+            //// Security -> PriceHistory (One-to-Many)
+            //modelBuilder.Entity<Security>()
+            //    .HasMany(s => s.PriceHistory)
+            //    .WithOne(ph => ph.Security)
+            //    .HasForeignKey(ph => ph.SecurityId)
+            //    .OnDelete(DeleteBehavior.Cascade);
+
+            //// Holding -> Transactions (One-to-Many)
+            //modelBuilder.Entity<Holding>()
+            //    .HasMany(h => h.Transactions)
+            //    .WithOne(t => t.Holding)
+            //    .HasForeignKey(t => t.HoldingId)
+            //    .OnDelete(DeleteBehavior.Cascade);
+
+            //// Holding -> Dividends (One-to-Many)
+            //modelBuilder.Entity<Holding>()
+            //    .HasMany(h => h.Dividends)
+            //    .WithOne(d => d.Holding)
+            //    .HasForeignKey(d => d.HoldingId)
+            //    .OnDelete(DeleteBehavior.Cascade);
         }
 
         private void ConfigureIndexes(ModelBuilder modelBuilder)
         {
-            throw new NotImplementedException();
+            // Default timestamps to current UTC time
+            modelBuilder.Entity<User>()
+                .Property(u => u.CreatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            modelBuilder.Entity<User>()
+                .Property(u => u.UpdatedAt)
+                .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+            // todo: Similar for other entities...
+            // (EF will use the default values from entity properties)
+        }
+
+        /// <summary>
+        /// SaveChangesAsync override to automatically update UpdatedAt timestamps.
+        /// This is called every time data is saved to the database.
+        /// </summary>
+        public override async Task<int> SaveChangesAsync(CancellationToken cancellationToken = new CancellationToken())
+        {
+            // Get all entities being tracked that have an UpdatedAt property
+            var entries = ChangeTracker.Entries()
+                .Where(e => e.State == EntityState.Added || e.State == EntityState.Modified);
+
+            foreach (var entry in entries)
+            {
+                // Automatically set UpdatedAt when entity is modified
+                if (entry.State == EntityState.Modified && entry.Entity.GetType().GetProperty("UpdatedAt") != null)
+                {
+                    entry.Property("UpdatedAt").CurrentValue = DateTime.UtcNow;
+                }
+
+                // Ensure CreatedAt is set for new entities
+                if (entry.State == EntityState.Added && entry.Entity.GetType().GetProperty("CreatedAt") != null)
+                {
+                    var createdAtValue = entry.Property("CreatedAt").CurrentValue;
+                    if (createdAtValue == null ||
+                        (createdAtValue is DateTime dt && dt == default))
+                    {
+                        entry.Property("CreatedAt").CurrentValue = DateTime.UtcNow;
+                    }
+                }
+            }
+
+            return await base.SaveChangesAsync(cancellationToken);
         }
     }
 }

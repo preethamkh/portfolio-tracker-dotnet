@@ -41,8 +41,10 @@ namespace PortfolioTracker.Core.Entities
         /// Last login is null until first login, set later, hence nullable
         /// </summary>
         public DateTime? LastLogin { get; set; }
-        
-        //todo: add portfolio collection? virtual? Q's
-        //todo: any additional properties
+
+        /// <summary>
+        /// Navigation property - One user can have multiple portfolios
+        /// </summary>
+        public virtual ICollection<Portfolio> Portfolios { get; set; } = new List<Portfolio>();
     }
 }
