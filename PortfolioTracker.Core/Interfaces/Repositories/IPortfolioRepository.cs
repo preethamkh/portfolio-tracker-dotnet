@@ -12,7 +12,7 @@ namespace PortfolioTracker.Core.Interfaces.Repositories
         /// Get all portfolios for a specific user
         /// </summary>
         /// <param name="userId"></param>
-        /// <returns></returns>
+        /// <returns>List of user's portfolios</returns>
         Task<IEnumerable<Portfolio>> GetByUserIdAsync(Guid userId);
 
         /// <summary>
@@ -22,7 +22,7 @@ namespace PortfolioTracker.Core.Interfaces.Repositories
         /// </summary>
         /// <param name="portfolioId"></param>
         /// <param name="userId"></param>
-        /// <returns></returns>
+        /// <returns>Portfolio details or null if not found/unauthorized</returns>
         Task<Portfolio?> GetByIdAndUserIdAsync(Guid portfolioId, Guid userId);
 
         /// <summary>

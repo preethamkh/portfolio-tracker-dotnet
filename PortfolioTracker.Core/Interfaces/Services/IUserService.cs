@@ -20,6 +20,11 @@ namespace PortfolioTracker.Core.Interfaces.Services
         /// Get all users.
         /// </summary>
         /// <returns>List of users</returns>
+        /// <remarks>
+        /// typical flow:
+        /// 1.	Service calls repository, gets a User entity.
+        /// 2.	Service maps User to UserDto (often using a mapper like AutoMapper).
+        /// 3.	Service returns UserDto to the caller.</remarks>
         Task<IEnumerable<UserDto>> GetAllUsersAsync();
 
 
