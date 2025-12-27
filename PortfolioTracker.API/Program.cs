@@ -1,4 +1,8 @@
 using Microsoft.EntityFrameworkCore;
+using PortfolioTracker.Core.Interfaces.Repositories;
+using PortfolioTracker.Core.Interfaces.Services;
+using PortfolioTracker.Core.Services;
+using PortfolioTracker.Infrastructure.Repositories;
 using ApplicationDbContext = PortfolioTracker.Infrastructure.Data.ApplicationDbContext;
 using DateTime = System.DateTime;
 using Exception = System.Exception;
@@ -36,6 +40,17 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
         options.EnableDetailedErrors();
     }
 });
+
+
+// DI order does not matter as long as all dependencies are registered before they are used.
+
+// Register Repositories (Data Access Layer)
+// AddScoped: new instance is created per HTTP request. This is a common choice for data access services.
+builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+
+// Register Services (Business Logic Layer)
+builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddControllers();
 

@@ -6,9 +6,24 @@ using PortfolioTracker.Infrastructure.Data;
 namespace PortfolioTracker.API.Controllers
 {
     /// <summary>
-    /// Controller for managing user accounts
-    /// Handles user registration, retrieval, management, and deletion
+    /// Controller for managing user accounts.
+    /// This controller is now THIN - it only handles HTTP concerns.
+    /// All business logic is in UserService.
     /// </summary>
+    /// <remarks>
+    /// Controller Responsibilities (Keep it THIN!):
+    /// 1. HTTP request/response handling
+    /// 2. Route mapping
+    /// 3. Status code decisions
+    /// 4. Input validation (basic)
+    /// 5. Calling services
+    /// 
+    /// What Controllers Should NOT Do:
+    /// DON'T DO : Business logic (that's in services)
+    /// DON'T DO : Database access (that's in repositories/services)
+    /// DON'T DO : Complex validation (that's in services/validators)
+    /// DON'T DO : Data mapping (that's in services)
+    /// </remarks>
     [ApiController]
     [Route("api/[controller]")]
     public class UsersController : ControllerBase
