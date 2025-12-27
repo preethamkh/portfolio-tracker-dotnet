@@ -18,6 +18,12 @@ namespace PortfolioTracker.Infrastructure.Repositories
     /// </remarks>
     public class Repository<T> : IRepository<T> where T : class
     {
+        // Repository uses ApplicationDbContext directly - this is fine, as it's part of the infrastructure layer
+        // Does not violate Dependency Inversion Principle because Core depends on IRepository<T> interface, not this implementation
+
+        // If we had multiple database providers, then we would abstract DbContext behind another interface.
+        // Or - if we are testing without any database
+        // YAGNI concept applies here for now.
         protected readonly ApplicationDbContext Context;
         protected readonly DbSet<T> DbSet;
 
