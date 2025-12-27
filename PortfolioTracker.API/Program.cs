@@ -48,9 +48,11 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // AddScoped: new instance is created per HTTP request. This is a common choice for data access services.
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IPortfolioRepository, PortfolioRepository>();
 
 // Register Services (Business Logic Layer)
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IPortfolioService, PortfolioService>();
 
 builder.Services.AddControllers();
 
