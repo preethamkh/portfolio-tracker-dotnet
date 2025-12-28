@@ -3,7 +3,6 @@ using Moq;
 using PortfolioTracker.Core.Entities;
 using PortfolioTracker.Core.Interfaces.Repositories;
 using PortfolioTracker.Core.Services;
-using Xunit.Sdk;
 
 namespace PortfolioTracker.UnitTests.Services;
 
@@ -131,6 +130,9 @@ public class UserServiceTests : TestBase
         result.Should().HaveCount(0);
     }
 
+    /// <summary>
+    /// Test: Get user by ID when user exists - happy path.
+    /// </summary>
     [Fact]
     public async Task GetUserByIdAsync_WhenUserExists_ShouldReturnUser()
     {
@@ -160,5 +162,48 @@ public class UserServiceTests : TestBase
         result.FullName.Should().Be("Preetham K H");
 
         _mockUserRepository.Verify(repo => repo.GetByIdAsync(userId), Times.Once);
+    }
+
+    /// <summary>
+    /// Test: Get user by ID when user does not exist.
+    /// To test error handling.
+    /// </summary>
+    /// <remarks>
+    /// Why return null instead of throwing exception?
+    /// - "Not found" is not an error - it's a valid business scenario
+    /// - Exceptions should be for exceptional conditions (database down, etc.)
+    /// - Null allows caller to handle gracefully (return 404 to client)
+    /// 
+    /// Alternative approaches:
+    /// - Return Result<UserDto/> with success/failure
+    /// - Throw NotFoundException
+    /// - This approach: Return null, let controller convert to 404
+    /// </remarks>
+    [Fact]
+    public async Task GetUserByIdAsync_WhenUserNotFound_ShouldReturnNull()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync((User?)null);
+
+        // Act
+        var result = await _userService.GetUserByIdAsync(userId);
+
+        // Assert
+        result.Should().BeNull();
+
+        _mockUserRepository.Verify(repo => repo.GetByIdAsync(userId), Times.Once);
+    }
+
+    /// <summary>
+    /// Test: Get user by email when user exists - happy path.
+    /// </summary>
+    [Fact]
+    public async Task GetUserByEmailAsync_WhenUserExists_ShouldReturnUser()
+    {
+        // todo: implement this test
     }
 }
