@@ -3,6 +3,7 @@ using Moq;
 using PortfolioTracker.Core.Entities;
 using PortfolioTracker.Core.Interfaces.Repositories;
 using PortfolioTracker.Core.Services;
+using Xunit.Sdk;
 
 namespace PortfolioTracker.UnitTests.Services;
 
@@ -43,7 +44,7 @@ public class UserServiceTests : TestBase
     public UserServiceTests()
     {
         _mockUserRepository = new Mock<IUserRepository>();
-        
+
         _userService = new UserService(_mockUserRepository.Object, CreateMockLogger<UserService>());
     }
 
@@ -100,5 +101,64 @@ public class UserServiceTests : TestBase
 
         // Verify that the repository method was called exactly once
         _mockUserRepository.Verify(repo => repo.GetAllAsync(), Times.Once);
+    }
+
+    /// <summary>
+    /// Test: GetAllUsersAsync when no users exist.
+    /// Scenario: Repository returns empty list.
+    /// Expected: Service returns empty list (not null, not error).
+    /// </summary>
+    /// <remarks>
+    /// Why test this?
+    /// - Empty state is common (new system, all users deleted, etc.)
+    /// - Service should handle gracefully (not crash!)
+    /// - Should return empty collection, not null (defensive programming)
+    /// </remarks>
+    [Fact]
+    public async Task GetAllUsersAsync_WhenNoUsers_ShouldReturnEmptyList()
+    {
+        // Arrange
+        _mockUserRepository
+            .Setup(repo => repo.GetAllAsync())
+            .ReturnsAsync(new List<User>());
+
+        // Act
+        var result = (await _userService.GetAllUsersAsync()).ToList();
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Should().BeEmpty();
+        result.Should().HaveCount(0);
+    }
+
+    [Fact]
+    public async Task GetUserByIdAsync_WhenUserExists_ShouldReturnUser()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var user = new User()
+        {
+            Id = userId,
+            Email = "kh@gmail.com",
+            FullName = "Preetham K H",
+            CreatedAt = DateTime.UtcNow,
+            LastLogin = null
+        };
+
+        // Mock setup: when looking for this user ID, return the user
+        _mockUserRepository
+            .Setup(repo => repo.GetByIdAsync(userId))
+            .ReturnsAsync(user);
+
+        // Act
+        var result = await _userService.GetUserByIdAsync(userId);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Id.Should().Be(userId);
+        result.Email.Should().Be("kh@gmail.com");
+        result.FullName.Should().Be("Preetham K H");
+
+        _mockUserRepository.Verify(repo => repo.GetByIdAsync(userId), Times.Once);
     }
 }
