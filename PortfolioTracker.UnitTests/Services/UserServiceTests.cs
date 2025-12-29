@@ -1,5 +1,6 @@
 ﻿using FluentAssertions;
 using Moq;
+using PortfolioTracker.Core.DTOs.User;
 using PortfolioTracker.Core.Entities;
 using PortfolioTracker.Core.Interfaces.Repositories;
 using PortfolioTracker.Core.Services;
@@ -141,8 +142,8 @@ public class UserServiceTests : TestBase
         var user = new User()
         {
             Id = userId,
-            Email = "kh@gmail.com",
-            FullName = "Preetham K H",
+            Email = "user1@test.com",
+            FullName = "User One",
             CreatedAt = DateTime.UtcNow,
             LastLogin = null
         };
@@ -158,8 +159,8 @@ public class UserServiceTests : TestBase
         // Assert
         result.Should().NotBeNull();
         result.Id.Should().Be(userId);
-        result.Email.Should().Be("kh@gmail.com");
-        result.FullName.Should().Be("Preetham K H");
+        result.Email.Should().Be("user1@test.com");
+        result.FullName.Should().Be("User One");
 
         _mockUserRepository.Verify(repo => repo.GetByIdAsync(userId), Times.Once);
     }
@@ -187,7 +188,7 @@ public class UserServiceTests : TestBase
 
         _mockUserRepository
             .Setup(repo => repo.GetByIdAsync(userId))
-            .ReturnsAsync((User?)null);
+            .ReturnsAsync((User?) null);
 
         // Act
         var result = await _userService.GetUserByIdAsync(userId);
@@ -204,6 +205,100 @@ public class UserServiceTests : TestBase
     [Fact]
     public async Task GetUserByEmailAsync_WhenUserExists_ShouldReturnUser()
     {
-        // todo: implement this test
+        // Arrange
+        const string email = "user1@test.com";
+
+        var user = new User()
+        {
+            Id = Guid.NewGuid(),
+            Email = email,
+            FullName = "User One",
+            CreatedAt = DateTime.UtcNow,
+            LastLogin = null
+        };
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByEmailAsync(email))
+            .ReturnsAsync(user);
+
+        // Act
+        var result = await _userService.GetUserByEmailAsync(email);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Email.Should().Be("user1@test.com");
+        result.FullName.Should().Be("User One");
+
+        _mockUserRepository.Verify(repo => repo.GetByEmailAsync(email), Times.Once);
+    }
+
+    /// <summary>
+    /// Test: Get user by email when user does not exist - error path. (returns null)
+    /// </summary>
+    [Fact]
+    public async Task GetUserByEmailAsync_WhenUserNotFound_ShouldReturnNull()
+    {
+        // Arrange
+        const string email = "user1@test.com";
+
+        _mockUserRepository
+            .Setup(repo => repo.GetByEmailAsync(email))
+            .ReturnsAsync((User?) null);
+
+        // Act
+        var result = await _userService.GetUserByEmailAsync(email);
+
+        // Assert
+        result.Should().BeNull();
+
+        _mockUserRepository.Verify(repo => repo.GetByEmailAsync(email), Times.Once);
+    }
+
+    /// <summary>
+    /// Create user with valid data - happy path.
+    /// An important test - verifies user creation logic / core functionality.
+    /// </summary>
+    /// <returns></returns>
+    [Fact]
+    public async Task CreateUserAsync_WithValidData_ShouldCreateUser()
+    {
+        // Arrange
+        var createUserDto = new CreateUserDto
+        {
+            Email = "user1@test.com",
+            Password = "Password123!",
+            FullName = "User One"
+        };
+
+        // Mock one: Email is not taken
+        // Business rule: check email availability before creating
+        _mockUserRepository
+            .Setup(repo => repo.IsEmailTakenAsync(createUserDto.Email, null))
+            .ReturnsAsync(false);
+
+        // Mock two: AddAsync - simulate adding user to database, should succeed
+        _mockUserRepository
+            .Setup(repo => repo.AddAsync(It.IsAny<User>()))
+            .ReturnsAsync((User u) => u);
+
+        // Mock three: SaveChangesAsync - simulate saving to database, should succeed
+        _mockUserRepository
+            .Setup(repo => repo.SaveChangesAsync())
+            .ReturnsAsync(1); // 1 row affected - EF core convention
+
+        // Act
+        var result = await _userService.CreateUserAsync(createUserDto);
+
+        // Assert
+        result.Should().NotBeNull();
+        result.Email.Should().Be(createUserDto.Email);
+        result.FullName.Should().Be(createUserDto.FullName);
+        result.Id.Should().NotBe(Guid.Empty);
+
+        _mockUserRepository.Verify(repo => repo.IsEmailTakenAsync(createUserDto.Email, null), Times.Once());
+
+        _mockUserRepository.Verify(repo => repo.AddAsync(It.IsAny<User>()), Times.Once());
+
+        _mockUserRepository.Verify(repo => repo.SaveChangesAsync(), Times.Once);
     }
 }
