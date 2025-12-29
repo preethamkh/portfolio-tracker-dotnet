@@ -113,7 +113,6 @@ namespace PortfolioTracker.Core.Services
             // Map DTO to entity
             var user = new User
             {
-                Id = Guid.NewGuid(),
                 Email = createUserDto.Email,
                 FullName = createUserDto.FullName,
                 // todo: Hash password properly - this is TEMPORARY!

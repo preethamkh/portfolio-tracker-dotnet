@@ -283,6 +283,14 @@ public class UserServiceTests : TestBase
         // Mock two: AddAsync - simulate adding user to database, should succeed
         _mockUserRepository.InSequence(sequence: mockCallSequence)
             .Setup(repo => repo.AddAsync(It.IsAny<User>()))
+            .Callback<User>(user =>
+            {
+                // simulate what the database would do - generate a new ID
+                if (user.Id == Guid.Empty)
+                {
+                    user.Id = Guid.NewGuid();
+                }
+            })
             .ReturnsAsync((User u) => u);
 
         // or whatever properties (can't figure out the ID as it's generated), hence use It.IsAny<Guid>()
@@ -306,9 +314,10 @@ public class UserServiceTests : TestBase
         result.Should().NotBeNull();
         result.Email.Should().Be(createUserDto.Email);
         result.FullName.Should().Be(createUserDto.FullName);
-        // found a bug (and fixed) - swagger would create the user ID correctly (ORM ensures this)
+        // swagger would create the user ID correctly (ORM ensures this)
         // but during test, since I am supplying the values, I need to ensure the CreateUserAsync()
         // has the Id = Guid.NewGuid() set so that the guid is non-empty, since I am mocking the repository and controlling the flow.
+        // see : Mock two: AddAsync above
         result.Id.Should().NotBe(Guid.Empty);
 
         // verify all repository methods were called in the correct order
