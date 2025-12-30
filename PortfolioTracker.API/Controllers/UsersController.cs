@@ -103,7 +103,7 @@ namespace PortfolioTracker.API.Controllers
                 // Return 201 Created with location header
                 return CreatedAtAction(
                     nameof(GetUser),
-                    new { id = user.Id },
+                    new { id = user!.Id },
                     user
                 );
             }
