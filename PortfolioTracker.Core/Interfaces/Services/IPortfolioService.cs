@@ -19,10 +19,10 @@ namespace PortfolioTracker.Core.Interfaces.Services
         /// Get a specific portfolio by ID.
         /// Ensures the portfolio belongs to the specified user (authorization).
         /// </summary>
-        /// <param name="id">Portfolio ID</param>
+        /// <param name="portfolioId">Portfolio ID</param>
         /// <param name="userId">User ID (for authorization)</param>
         /// <returns>Portfolio details or null if not found/unauthorized</returns>
-        Task<PortfolioDto?> GetPortfolioByIdAsync(Guid id, Guid userId);
+        Task<PortfolioDto?> GetPortfolioByIdAsync(Guid portfolioId, Guid userId);
 
         /// <summary>
         /// Get the user's default portfolio.
@@ -42,26 +42,26 @@ namespace PortfolioTracker.Core.Interfaces.Services
         /// <summary>
         /// Update portfolio details.
         /// </summary>
-        /// <param name="id">Portfolio ID</param>
+        /// <param name="portfolioId">Portfolio ID</param>
         /// <param name="userId">User ID (for authorization)</param>
         /// <param name="updatePortfolioDto">Updated portfolio data</param>
         /// <returns>Updated portfolio details or null if not found/unauthorized</returns>
-        Task<PortfolioDto?> UpdatePortfolioAsync(Guid id, Guid userId, UpdatePortfolioDto updatePortfolioDto);
+        Task<PortfolioDto?> UpdatePortfolioAsync(Guid portfolioId, Guid userId, UpdatePortfolioDto updatePortfolioDto);
 
         /// <summary>
         /// Delete a portfolio.
         /// </summary>
-        /// <param name="id">Portfolio ID</param>
+        /// <param name="portfolioId">Portfolio ID</param>
         /// <param name="userId">User ID (for authorization)</param>
         /// <returns>True if deleted, false if not found/unauthorized</returns>
-        Task<bool> DeletePortfolioAsync(Guid id, Guid userId);
+        Task<bool> DeletePortfolioAsync(Guid portfolioId, Guid userId);
 
         /// <summary>
         /// Set a portfolio as the user's default.
         /// </summary>
-        /// <param name="id">Portfolio ID</param>
+        /// <param name="portfolioId">Portfolio ID</param>
         /// <param name="userId">User ID (for authorization)</param>
         /// <returns>True if set as default, false if not found/unauthorized</returns>
-        Task<bool> SetAsDefaultAsync(Guid id, Guid userId);
+        Task<bool> SetAsDefaultAsync(Guid portfolioId, Guid userId);
     }
 }

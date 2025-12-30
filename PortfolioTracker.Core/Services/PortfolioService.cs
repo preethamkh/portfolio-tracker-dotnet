@@ -51,17 +51,17 @@ namespace PortfolioTracker.Core.Services
         /// Get a specific portfolio by ID.
         /// Authorization: Ensures portfolio belongs to the user.
         /// </summary>
-        public async Task<PortfolioDto?> GetPortfolioByIdAsync(Guid id, Guid userId)
+        public async Task<PortfolioDto?> GetPortfolioByIdAsync(Guid portfolioId, Guid userId)
         {
-            _logger.LogInformation("Retrieving portfolio {PortfolioId} for user {UserId}", id, userId);
+            _logger.LogInformation("Retrieving portfolio {PortfolioId} for user {UserId}", portfolioId, userId);
 
             // This method ensures authorization at data layer
-            var portfolio = await _portfolioRepository.GetByIdAndUserIdAsync(id, userId);
+            var portfolio = await _portfolioRepository.GetByIdAndUserIdAsync(portfolioId, userId);
 
             if (portfolio == null)
             {
                 _logger.LogWarning("Portfolio {PortfolioId} not found or unauthorized for user {UserId}",
-                    id, userId);
+                    portfolioId, userId);
                 return null;
             }
 
@@ -153,17 +153,17 @@ namespace PortfolioTracker.Core.Services
         /// Update portfolio details.
         /// Authorization: Ensures portfolio belongs to the user.
         /// </summary>
-        public async Task<PortfolioDto?> UpdatePortfolioAsync(Guid id, Guid userId, UpdatePortfolioDto updatePortfolioDto)
+        public async Task<PortfolioDto?> UpdatePortfolioAsync(Guid portfolioId, Guid userId, UpdatePortfolioDto updatePortfolioDto)
         {
-            _logger.LogInformation("Updating portfolio {PortfolioId} for user {UserId}", id, userId);
+            _logger.LogInformation("Updating portfolio {PortfolioId} for user {UserId}", portfolioId, userId);
 
             // Authorization check
-            var portfolio = await _portfolioRepository.GetByIdAndUserIdAsync(id, userId);
+            var portfolio = await _portfolioRepository.GetByIdAndUserIdAsync(portfolioId, userId);
 
             if (portfolio == null)
             {
                 _logger.LogWarning("Portfolio {PortfolioId} not found or unauthorized for user {UserId}",
-                    id, userId);
+                    portfolioId, userId);
                 return null;
             }
 
@@ -173,7 +173,7 @@ namespace PortfolioTracker.Core.Services
             {
                 // Check for duplicate name
                 var nameExists = await _portfolioRepository.UserHasPortfolioWithNameAsync(
-                    userId, updatePortfolioDto.Name, id);
+                    userId, updatePortfolioDto.Name, portfolioId);
 
                 if (nameExists)
                 {
@@ -204,7 +204,7 @@ namespace PortfolioTracker.Core.Services
                 if (updatePortfolioDto.IsDefault.Value && !portfolio.IsDefault)
                 {
                     // Set as new default (will unset others)
-                    await _portfolioRepository.SetAsDefaultAsync(id, userId);
+                    await _portfolioRepository.SetAsDefaultAsync(portfolioId, userId);
                 }
                 else if (!updatePortfolioDto.IsDefault.Value && portfolio.IsDefault)
                 {
@@ -217,7 +217,7 @@ namespace PortfolioTracker.Core.Services
             await _portfolioRepository.UpdateAsync(portfolio);
             await _portfolioRepository.SaveChangesAsync();
 
-            _logger.LogInformation("Updated portfolio {PortfolioId}", id);
+            _logger.LogInformation("Updated portfolio {PortfolioId}", portfolioId);
 
             return MapPortfolioToDto(portfolio);
         }
@@ -226,17 +226,17 @@ namespace PortfolioTracker.Core.Services
         /// Delete a portfolio.
         /// Authorization: Ensures portfolio belongs to the user.
         /// </summary>
-        public async Task<bool> DeletePortfolioAsync(Guid id, Guid userId)
+        public async Task<bool> DeletePortfolioAsync(Guid portfolioId, Guid userId)
         {
-            _logger.LogInformation("Deleting portfolio {PortfolioId} for user {UserId}", id, userId);
+            _logger.LogInformation("Deleting portfolio {PortfolioId} for user {UserId}", portfolioId, userId);
 
             // Authorization check
-            var portfolio = await _portfolioRepository.GetByIdAndUserIdAsync(id, userId);
+            var portfolio = await _portfolioRepository.GetByIdAndUserIdAsync(portfolioId, userId);
 
             if (portfolio == null)
             {
                 _logger.LogWarning("Portfolio {PortfolioId} not found or unauthorized for user {UserId}",
-                    id, userId);
+                    portfolioId, userId);
                 return false;
             }
 
@@ -244,7 +244,7 @@ namespace PortfolioTracker.Core.Services
             await _portfolioRepository.DeleteAsync(portfolio);
             await _portfolioRepository.SaveChangesAsync();
 
-            _logger.LogInformation("Deleted portfolio {PortfolioId}", id);
+            _logger.LogInformation("Deleted portfolio {PortfolioId}", portfolioId);
 
             return true;
         }
@@ -253,25 +253,25 @@ namespace PortfolioTracker.Core.Services
         /// Set a portfolio as the user's default.
         /// Authorization: Ensures portfolio belongs to the user.
         /// </summary>
-        public async Task<bool> SetAsDefaultAsync(Guid id, Guid userId)
+        public async Task<bool> SetAsDefaultAsync(Guid portfolioId, Guid userId)
         {
             _logger.LogInformation("Setting portfolio {PortfolioId} as default for user {UserId}",
-                id, userId);
+                portfolioId, userId);
 
             // Authorization check
-            var portfolio = await _portfolioRepository.GetByIdAndUserIdAsync(id, userId);
+            var portfolio = await _portfolioRepository.GetByIdAndUserIdAsync(portfolioId, userId);
 
             if (portfolio == null)
             {
                 _logger.LogWarning("Portfolio {PortfolioId} not found or unauthorized for user {UserId}",
-                    id, userId);
+                    portfolioId, userId);
                 return false;
             }
 
             // Set as default (will unset others)
-            await _portfolioRepository.SetAsDefaultAsync(id, userId);
+            await _portfolioRepository.SetAsDefaultAsync(portfolioId, userId);
 
-            _logger.LogInformation("Set portfolio {PortfolioId} as default", id);
+            _logger.LogInformation("Set portfolio {PortfolioId} as default", portfolioId);
 
             return true;
         }
