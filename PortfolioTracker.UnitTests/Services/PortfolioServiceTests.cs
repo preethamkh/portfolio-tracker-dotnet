@@ -159,7 +159,7 @@ namespace PortfolioTracker.UnitTests.Services
             // User exists
             _mockUserRepository
                 .Setup(repo => repo.GetByIdAsync(userId))
-                .ReturnsAsync(new User {Id = userId, Email = "user1@test.com"});
+                .ReturnsAsync(new User { Id = userId, Email = "user1@test.com" });
 
             // No existing portfolio with same name for this user
             _mockPortfolioRepository
@@ -211,7 +211,7 @@ namespace PortfolioTracker.UnitTests.Services
 
             _mockUserRepository
                 .Setup(repo => repo.GetByIdAsync(userId))
-                .ReturnsAsync((User?) null);
+                .ReturnsAsync((User?)null);
 
             // Act
             Func<Task> createPortfolioAsyncAction = async () =>
@@ -308,6 +308,246 @@ namespace PortfolioTracker.UnitTests.Services
 
             // Verify SetAsDefaultAsync was called to unset other defaults.
             _mockPortfolioRepository.Verify(repo => repo.SetAsDefaultAsync(It.IsAny<Guid>(), userId), Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdatePortfolioAsync_WithValidData_ShouldUpdatePortfolio()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var portfolioId = Guid.NewGuid();
+            var existingPortfolio = new Portfolio
+            {
+                Id = portfolioId,
+                UserId = userId,
+                Name = "Old Name",
+                Description = "Old Description",
+                Currency = "AUD"
+            };
+
+            var updatePortfolioDto = new UpdatePortfolioDto
+            {
+                Name = "New Name",
+                Description = "New Description"
+            };
+
+            _mockPortfolioRepository
+                .Setup(repo => repo.GetByIdAndUserIdAsync(portfolioId, userId))
+                .ReturnsAsync(existingPortfolio);
+
+            _mockPortfolioRepository
+                .Setup(repo => repo.UserHasPortfolioWithNameAsync(userId, updatePortfolioDto.Name!, portfolioId))
+                .ReturnsAsync(false);
+
+            _mockPortfolioRepository
+                .Setup(repo => repo.UpdateAsync(It.IsAny<Portfolio>()))
+                .Returns(Task.CompletedTask);
+
+            _mockPortfolioRepository
+                .Setup(r => r.SaveChangesAsync())
+                .ReturnsAsync(1);
+
+            // Act
+            var result = await _portfolioService.UpdatePortfolioAsync(portfolioId, userId, updatePortfolioDto);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Name.Should().Be("New Name");
+            result.Description.Should().Be("New Description");
+
+            _mockPortfolioRepository.Verify(
+                r => r.UpdateAsync(It.IsAny<Portfolio>()),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task UpdatePortfolioAsync_WithDuplicateName_ShouldThrowException()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var portfolioId = Guid.NewGuid();
+            var existingPortfolio = new Portfolio
+            {
+                Id = portfolioId,
+                UserId = userId,
+                Name = "Old Name",
+                Description = "Old Description",
+                Currency = "AUD"
+            };
+
+            var updatePortfolioDto = new UpdatePortfolioDto
+            {
+                Name = "Taken Name",
+                Description = "Taken Description"
+            };
+
+            _mockPortfolioRepository
+                .Setup(repo => repo.GetByIdAndUserIdAsync(portfolioId, userId))
+                .ReturnsAsync(existingPortfolio);
+
+            _mockPortfolioRepository
+                .Setup(repo => repo.UserHasPortfolioWithNameAsync(userId, updatePortfolioDto.Name!, portfolioId))
+                .ReturnsAsync(true);
+
+            // Act
+            Func<Task> updatePortfolioAsyncAction = async () => await _portfolioService.UpdatePortfolioAsync(portfolioId, userId, updatePortfolioDto);
+
+            // Assert
+            await updatePortfolioAsyncAction.Should().ThrowAsync<InvalidOperationException>()
+                .WithMessage($"You already have another portfolio named 'Taken Name'");
+
+            _mockPortfolioRepository.Verify(
+                r => r.UpdateAsync(It.IsAny<Portfolio>()),
+                Times.Never);
+        }
+
+        /// <summary>
+        /// Tests authorization during update.
+        /// </summary>
+        [Fact]
+        public async Task UpdatePortfolioAsync_WhenNotAuthorized_ShouldReturnNull()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var portfolioId = Guid.NewGuid();
+            var updateDto = new UpdatePortfolioDto { Name = "New Name" };
+
+            _mockPortfolioRepository
+                .Setup(repo => repo.GetByIdAndUserIdAsync(portfolioId, userId))
+                .ReturnsAsync((Portfolio?)null);
+
+            // Act
+            var result = await _portfolioService.UpdatePortfolioAsync(portfolioId, userId, updateDto);
+
+            // Assert
+            result.Should().BeNull();
+
+            _mockPortfolioRepository.Verify(
+                r => r.UpdateAsync(It.IsAny<Portfolio>()),
+                Times.Never
+            );
+        }
+
+        [Fact]
+        public async Task DeletePortfolioAsync_WhenAuthorized_ShouldDeletePortfolio()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var portfolioId = Guid.NewGuid();
+            var portfolioToDelete = new Portfolio
+            {
+                Id = portfolioId,
+                UserId = userId,
+                Name = "To Delete"
+            };
+
+            _mockPortfolioRepository
+                .Setup(repo => repo.GetByIdAndUserIdAsync(portfolioId, userId))
+                .ReturnsAsync(portfolioToDelete);
+
+            _mockPortfolioRepository
+                .Setup(repo => repo.DeleteAsync(portfolioToDelete))
+                .Returns(Task.CompletedTask);
+
+            // Act
+            var result = await _portfolioService.DeletePortfolioAsync(portfolioId, userId);
+
+            // Assert
+            result.Should().BeTrue();
+
+            _mockPortfolioRepository.Verify(
+                repo => repo.DeleteAsync(portfolioToDelete),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task DeletePortfolioAsync_WhenNotAuthorized_ShouldReturnFalse()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var portfolioId = Guid.NewGuid();
+
+            _mockPortfolioRepository
+                .Setup(repo => repo.GetByIdAndUserIdAsync(portfolioId, userId))
+                .ReturnsAsync((Portfolio?)null);
+
+            // Act
+            var result = await _portfolioService.DeletePortfolioAsync(portfolioId, userId);
+
+            // Assert
+            result.Should().BeFalse();
+
+            _mockPortfolioRepository.Verify(
+                repo => repo.DeleteAsync(It.IsAny<Portfolio>()),
+                Times.Never
+            );
+        }
+
+        [Fact]
+        public async Task SetAsDefaultAsync_WhenNotAuthorized_ShouldReturnFalse()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var portfolioId = Guid.NewGuid();
+
+            _mockPortfolioRepository
+                .Setup(repo => repo.GetByIdAndUserIdAsync(portfolioId, userId))
+                .ReturnsAsync((Portfolio?)null);
+
+            // Act
+            var result = await _portfolioService.SetAsDefaultAsync(portfolioId, userId);
+
+            // Assert
+            result.Should().BeFalse();
+
+            _mockPortfolioRepository.Verify(
+                repo => repo.SetAsDefaultAsync(It.IsAny<Guid>(), It.IsAny<Guid>()),
+                Times.Never
+            );
+        }
+
+        [Fact]
+        public async Task GetDefaultPortfolioAsync_WhenDefaultExists_ShouldReturnDefaultPortfolio()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+            var defaultPortfolio = new Portfolio()
+            {
+                Id = Guid.NewGuid(),
+                Name = "Default Portfolio",
+                UserId = userId,
+                IsDefault = true,
+                Currency = "AUD"
+            };
+
+            _mockPortfolioRepository
+                .Setup(r => r.GetDefaultPortfolioAsync(userId))
+                .ReturnsAsync(defaultPortfolio);
+
+            // Act
+            var result = await _portfolioService.GetDefaultPortfolioAsync(userId);
+
+            // Assert
+            result.Should().NotBeNull();
+            result.Name.Should().Be("Default Portfolio");
+            result.IsDefault.Should().BeTrue();
+        }
+
+        [Fact]
+        public async Task GetDefaultPortfolioAsync_WhenNoDefault_ShouldReturnNull()
+        {
+            // Arrange
+            var userId = Guid.NewGuid();
+
+            _mockPortfolioRepository
+                .Setup(r => r.GetDefaultPortfolioAsync(userId))
+                .ReturnsAsync((Portfolio?)null);
+
+            // Act
+            var result = await _portfolioService.GetDefaultPortfolioAsync(userId);
+
+            // Assert
+            result.Should().BeNull();
         }
     }
 }
