@@ -15,6 +15,8 @@ namespace PortfolioTracker.IntegrationTests;
 /// - Database is created once per test class, not per test
 /// - Trade-off: Tests in the same class share fixture (but get clean DB each time)
 ///
+/// A way to share expensive setup (like starting a test server) across multiple tests in a class
+/// 
 /// Lifecycle:
 /// 1. xUnit creates IntegrationTestWebAppFactory (once per test class)
 /// 2. For each test:
