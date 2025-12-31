@@ -28,8 +28,6 @@ namespace PortfolioTracker.IntegrationTests.Helpers
     /// </remarks>
     public static class HttpClientExtensions
     {
-        #region JSON Serialization Options
-
         /// <summary>
         /// JSON serialization options matching ASP.NET Core defaults.
         /// Ensures test serialization matches API serialization.
@@ -56,11 +54,7 @@ namespace PortfolioTracker.IntegrationTests.Helpers
             PropertyNameCaseInsensitive = true,
             PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
         };
-
-        #endregion
-
-        #region POST Extensions
-
+        
         /// <summary>
         /// Sends a POST request with a JSON body.
         /// Automatically serializes the DTO to JSON using predefined options.
@@ -90,10 +84,6 @@ namespace PortfolioTracker.IntegrationTests.Helpers
             return client.PostAsJsonAsync(url, dto, JsonOptions);
         }
 
-        #endregion
-
-        #region PUT Extensions
-
         /// <summary>
         /// Sends PUT request with JSON body.
         /// </summary>
@@ -102,6 +92,86 @@ namespace PortfolioTracker.IntegrationTests.Helpers
             return client.PutAsJsonAsync(url, dto, JsonOptions);
         }
 
-        #endregion
+        /// <summary>
+        /// Reads response body as JSON and deserializes to specified type.
+        /// </summary>
+        /// <typeparam name="T">Type to deserialize to</typeparam>
+        /// <param name="response">HTTP response    </param>
+        /// <returns>Deserialized object</returns>
+        /// <remarks>
+        /// This replaces:
+        /// var content = await response.Content.ReadAsStringAsync();
+        ///  return JsonSerializer.Deserialize<T/>(content, JsonOptions);
+        /// With:
+        /// var user = await response.ReadAsJsonAsync<T/>();
+        /// 
+        /// What happens:
+        /// 1. Reads response body as string
+        /// 2. Deserializes JSON to specified type
+        /// 3. Returns typed object
+        /// 
+        /// Example:
+        /// var response = await client.GetAsync("/api/users/123");
+        /// var user = await response.ReadAsJsonAsync<T/>();
+        /// 
+        /// user.Email.Should().Be("test@test.com"); // Strongly typed
+        /// </remarks>
+        public static async Task<T?> ReadAsJsonAsync<T>(this HttpResponseMessage response)
+        {
+            return await response.Content.ReadFromJsonAsync<T>(JsonOptions);
+
+            // alternative without built-in extension:
+            //var content = await response.Content.ReadAsStringAsync();
+            //return JsonSerializer.Deserialize<T>(content, JsonOptions);
+        }
+
+        /// <summary>
+        /// Reads response and asserts it's successful, then deserializes.
+        /// Convenience method combining success check and deserialization.
+        /// </summary>
+        public static async Task<T> ReadAsSuccessfulJsonAsync<T>(this HttpResponseMessage response)
+        {
+            // throws exception if not 2xx
+            response.EnsureSuccessStatusCode();
+
+            var result = await response.ReadAsJsonAsync<T>();
+            // null forgiving because EnsureSuccessStatusCode ensures valid content and would have thrown otherwise
+            return result!;
+        }
+
+        /// <summary>
+        /// Reads response content as string.
+        /// Useful for asserting raw response bodies in tests.
+        /// </summary>
+        /// <remarks>
+        /// This helps you test error messages:
+        /// 
+        /// var response = await client.PostAsync(...);
+        /// response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        /// 
+        /// var error = await response.ReadAsStringAsync();
+        /// error.Should().Contain("already exists");
+        /// </remarks>
+        public static async Task<string> ReadAsStringAsync(this HttpResponseMessage response)
+        {
+            return await response.Content.ReadAsStringAsync();
+        }
+
+        /// <summary>
+        /// Builds URL with query parameters.
+        /// </summary>
+        public static string BuildUrl(string baseUrl, Dictionary<string, string>? queryParams = null)
+        {
+            if (queryParams == null || queryParams.Count == 0)
+            {
+                return baseUrl;
+            }
+
+            // Uri.EscapeDataString encodes special characters
+            var queryString = string.Join("&",
+                queryParams.Select(kvp => $"{kvp.Key}={Uri.EscapeDataString(kvp.Value)}"));
+            
+            return $"{baseUrl}?{queryString}";
+        }
     }
 }
