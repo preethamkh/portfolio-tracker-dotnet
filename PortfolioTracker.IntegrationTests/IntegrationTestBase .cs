@@ -8,6 +8,21 @@ namespace PortfolioTracker.IntegrationTests;
 /// Base class for all integration tests.
 /// Provides common setup and utilities for integration testing.
 /// </summary>
+/// <remarks>
+/// Why use IClassFixture?
+/// - xUnit creates one instance of the fixture for ALL tests in the class
+/// - The factory (with the test server) is reused across tests == faster tests
+/// - Database is created once per test class, not per test
+/// - Trade-off: Tests in the same class share fixture (but get clean DB each time)
+///
+/// Lifecycle:
+/// 1. xUnit creates IntegrationTestWebAppFactory (once per test class)
+/// 2. For each test:
+///    - Constructor runs
+///    - Test runs
+///    - Dispose runs (cleanup)
+/// 3. After all tests: Factory disposed
+/// </remarks>
 public abstract class IntegrationTestBase : IClassFixture<IntegrationTestWebAppFactory>, IDisposable
 {
     /// <summary>
@@ -44,13 +59,27 @@ public abstract class IntegrationTestBase : IClassFixture<IntegrationTestWebAppF
         // Create HTTP client (talks to in-memory test server)
         Client = factory.CreateClient();
 
+        // Get database context from DI
+        // Why scope? DbContext is scoped (one per request)
+        // factory.Services in the test in a reference to the DI container built from the registrations in Program.cs in the main project.
         _scope = factory.Services.CreateScope();
+        // asking for an instance of a service of type ApplicationDbContext from the service provider associated with the created scope. (from Program.cs registrations)
         Context = _scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
 
         // Clean DB before each test
         CleanDatabase();
     }
 
+    /// <summary>
+    /// Cleans all data from database.
+    /// Ensures each test starts with empty database (test isolation).
+    /// </summary>
+    /// <remarks>
+    /// Why clean instead of recreate?
+    /// - Faster (don't drop/recreate schema)
+    /// - Schema already exists from EnsureCreated()
+    /// - Just remove data, keep structure
+    /// </remarks>
     private void CleanDatabase()
     {
         // Remove all data (order matters due to foreign keys)
