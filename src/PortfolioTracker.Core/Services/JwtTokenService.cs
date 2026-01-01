@@ -1,6 +1,7 @@
 ﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using PortfolioTracker.Core.Configuration;
 using PortfolioTracker.Core.Entities;
@@ -8,8 +9,10 @@ using PortfolioTracker.Core.Interfaces.Services;
 
 namespace PortfolioTracker.Core.Services;
 
-public class JwtTokenService(JwtSettings jwtSettings) : IJwtTokenService
+public class JwtTokenService(IOptions<JwtSettings> jwtSettings) : IJwtTokenService
 {
+    private readonly JwtSettings _jwtSettings = jwtSettings.Value;
+
     /// <summary>
     /// Generates a JWT token for the specified user.
     /// </summary>
@@ -48,7 +51,7 @@ public class JwtTokenService(JwtSettings jwtSettings) : IJwtTokenService
         };
 
         // Step 2: Create signing credentials using the secret key
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSettings.Secret));
 
         // Create credentials with HMAC SHA-256 algorithm
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -57,10 +60,10 @@ public class JwtTokenService(JwtSettings jwtSettings) : IJwtTokenService
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(jwtSettings.ExpirationInMinutes),
+            Expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationInMinutes),
             SigningCredentials = credentials,
-            Issuer = jwtSettings.Issuer,
-            Audience = jwtSettings.Audience
+            Issuer = _jwtSettings.Issuer,
+            Audience = _jwtSettings.Audience
         };
 
         // Step 4: Generate the token
@@ -89,7 +92,7 @@ public class JwtTokenService(JwtSettings jwtSettings) : IJwtTokenService
         try
         {
             var tokenHandler = new JwtSecurityTokenHandler();
-            var key = Encoding.UTF8.GetBytes(jwtSettings.Secret);
+            var key = Encoding.UTF8.GetBytes(_jwtSettings.Secret);
 
             // Validation parameters
             var validationParameters = new TokenValidationParameters
@@ -100,11 +103,11 @@ public class JwtTokenService(JwtSettings jwtSettings) : IJwtTokenService
 
                 // Issuer validation
                 ValidateIssuer = true,
-                ValidIssuer = jwtSettings.Issuer,
+                ValidIssuer = _jwtSettings.Issuer,
 
                 // Audience validation
                 ValidateAudience = true,
-                ValidAudience = jwtSettings.Audience,
+                ValidAudience = _jwtSettings.Audience,
 
                 // Expiration validation
                 ValidateLifetime = true,
