@@ -33,6 +33,10 @@ namespace PortfolioTracker.IntegrationTests.Fixtures;
 /// </remarks>
 public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>
 {
+    // Unique DB name per factory instance
+    // Ensures isolation between test classes
+    private readonly string _dbName = $"TestDb_{Guid.NewGuid():N}";
+
     /// <summary>
     /// Override this method to configure services for testing.
     /// This is where we swap out the real(prod) database with an in-memory database.
@@ -61,7 +65,7 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>
             {
                 // UseInMemoryDatabase creates a fake database in memory
                 // Database name must be unique per test to avoid conflicts
-                options.UseInMemoryDatabase($"TestDb_{Guid.NewGuid()}");
+                options.UseInMemoryDatabase(_dbName);
 
                 // Why in-memory?
                 // - Fast: No disk I/O

@@ -187,7 +187,7 @@ namespace PortfolioTracker.UnitTests.Services
             result.Should().NotBeNull();
             result.Name.Should().Be("Index Funds");
             result.UserId.Should().Be(userId);
-            result.Currency.Should().Be("USD");
+            result.Currency.Should().Be("AUD");
             result.Id.Should().NotBe(Guid.Empty);
 
             _mockPortfolioRepository.Verify(repo => repo.AddAsync(It.IsAny<Portfolio>()), Times.Once);

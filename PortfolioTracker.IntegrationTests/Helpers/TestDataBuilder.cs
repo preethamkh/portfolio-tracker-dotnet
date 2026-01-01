@@ -48,7 +48,7 @@ namespace PortfolioTracker.IntegrationTests.Helpers
             {
                 // Generate unique email if not provided
                 // :N format = no hyphens in guid
-                Email = email ?? $"test{Guid.NewGuid():N@test.com}",
+                Email = email ?? $"test{Guid.NewGuid():N}@test.com",
                 FullName = fullName ?? "Test User",
                 PasswordHash = password ?? "hashedPassword123",
             };

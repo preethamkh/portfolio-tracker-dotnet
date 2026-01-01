@@ -31,18 +31,14 @@ namespace PortfolioTracker.Infrastructure.Repositories
         // exclude a specific user ID (for updates to their own user profile)
         public async Task<bool> IsEmailTakenAsync(string email, Guid? excludeUserId = null)
         {
-            //var query = DbSet.Where(u => u.Email == email);
+            var query = DbSet.Where(u => u.Email == email);
 
-            //if (excludeUserId.HasValue)
-            //{
-            //    query = query.Where(u => u.Id != excludeUserId.Value);
-            //}
+            if (excludeUserId.HasValue)
+            {
+               query = query.Where(u => u.Id != excludeUserId.Value);
+            }
 
-            //return await query.AnyAsync();
-
-            return await DbSet
-                .AsNoTracking()
-                .AnyAsync(u => u.Email == email && excludeUserId != null && u.Id != excludeUserId.Value);
+            return await query.AnyAsync();                
         }
     }
 }
