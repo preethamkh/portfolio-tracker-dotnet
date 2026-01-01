@@ -118,7 +118,7 @@ public class UsersControllerTests : IntegrationTestBase
         // Verify user was actually created in the database
         var userInDatabase = await Context.Users.FirstOrDefaultAsync(u => u.Id == createdUser.Id);
         userInDatabase.Should().NotBeNull();
-        userInDatabase!.Email.Should().Be("preetham@test.com");
+        userInDatabase.Email.Should().Be("preetham@test.com");
     }
 
     [Fact]
@@ -212,7 +212,7 @@ public class UsersControllerTests : IntegrationTestBase
         // tracked the enitity, it may return the cached (pre-update) version, not the lates from the DB.
         var userInDatabase = await Context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Id);
         userInDatabase.Should().NotBeNull();
-        userInDatabase!.Email.Should().Be("updatedemail@test.com");
+        userInDatabase.Email.Should().Be("updatedemail@test.com");
         userInDatabase.FullName.Should().Be("Updated Name");
     }
 
@@ -256,7 +256,8 @@ public class UsersControllerTests : IntegrationTestBase
         userInDatabase.Should().BeNull();
     }
 
-    [Fact]
+
+    [Fact(Skip = "Temporarily disabled due to known in-memory cascade deletion issue and wanting to swap to real DB for the test")]
     public async Task DeleteUser_WithPortfolios_DeletesCascade()
     {
         // ARRANGE
@@ -271,15 +272,15 @@ public class UsersControllerTests : IntegrationTestBase
 
         // todo: comment this for now as I want to use a real database backed integration test
         // since there is an issue with in-memory db and cascade delete
-        // Verify user deleted
-        //var userInDb = await Context.Users.FindAsync(user.Id);
-        // var userInDatabase = await ReloadFromDb(user);
-        // userInDatabase.Should().BeNull();
+        // Verify user deleted - FindAsync() checks cache first, so use ReloadFromDb to force fresh query
+        // var userInDb = await Context.Users.FindAsync(user.Id);
 
-        // // Verify portfolio also deleted (cascade!)
-        // //var portfolioInDb = await Context.Portfolios.FindAsync(portfolio.Id);
-        // var portfolioInDatabase = await ReloadFromDb(portfolio);
-        // portfolioInDatabase.Should().BeNull();
+        var userInDatabase = await ReloadFromDb(user);
+        userInDatabase.Should().BeNull();
+
+        // Verify portfolio also deleted (cascade!)
+        var portfolioInDatabase = await ReloadFromDb(portfolio);
+        portfolioInDatabase.Should().BeNull();
     }
 
 
