@@ -199,8 +199,10 @@ app.UseHttpsRedirection();
 // Enable CORS
 app.UseCors("AllowReactApp");
 
-// Enable authorization (todo: add authentication later)
-app.UseAuthorization();
+// Enable Authentication and Authorization
+// Authentication must come before Authorization
+app.UseAuthentication(); // validates JWT token
+app.UseAuthorization(); // checks user permissions [Authorize]
 
 // Map controller endpoints
 app.MapControllers();
