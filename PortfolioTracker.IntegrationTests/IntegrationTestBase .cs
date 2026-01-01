@@ -1,4 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using PortfolioTracker.Infrastructure.Data;
 using PortfolioTracker.IntegrationTests.Fixtures;
 
@@ -99,5 +100,49 @@ public abstract class IntegrationTestBase : IClassFixture<IntegrationTestWebAppF
         // we don't dispose Client or Factory as they are reused across tests
         // xUnit manages their lifetimes (Factory by xUnit, Client by Factory)
         _scope.Dispose();
+    }
+
+    /// <summary>
+    /// Reloads an entity from the database, bypassing EF Core's cache.
+    /// Use this when you need to verify changes made by API calls.
+    /// </summary>
+    /// <remarks>
+    /// Why needed?
+    /// - Test DbContext and API DbContext are different instances
+    /// - API changes aren't reflected in Test's cache
+    /// - This forces a fresh database query
+    /// 
+    /// Example:
+    /// var user = await CreateUser();
+    /// await Client.PutAsync($"/api/users/{user.Id}", updateDto);
+    /// var updated = await ReloadFromDb(user); // Gets fresh data!
+    /// </remarks>
+    protected async Task<T?> ReloadFromDb<T>(T entity) where T : class
+    {
+        // Clear tracking to force database hit
+        Context.ChangeTracker.Clear();
+        
+        // Use reflection to get the entity's ID
+        var idProperty = typeof(T).GetProperty("Id");
+        if (idProperty == null)
+            throw new InvalidOperationException($"Entity {typeof(T).Name} doesn't have an Id property");
+        
+        var id = idProperty.GetValue(entity);
+        
+        // Find by ID (will hit database now that cache is clear)
+        return await Context.Set<T>().FindAsync(id);
+    }
+
+    /// <summary>
+    /// Checks if an entity exists in the database.
+    /// Always queries the database (bypasses cache).
+    /// </summary>
+    protected async Task<bool> ExistsInDb<T>(Guid id) where T : class
+    {
+        var entity = await Context.Set<T>()
+            .AsNoTracking()
+            .FirstOrDefaultAsync(e => EF.Property<Guid>(e, "Id") == id);
+        
+        return entity != null;
     }
 }
