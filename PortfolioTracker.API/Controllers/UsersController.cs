@@ -45,6 +45,7 @@ namespace PortfolioTracker.API.Controllers
         /// Get all users (for testing purposes - not for production)
         /// </summary>
         /// <returns>List of all users</returns>
+        /// todo: revisit the need for this endpoint before deploying this app to production 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<UserDto>>> GetUsers()
         {
