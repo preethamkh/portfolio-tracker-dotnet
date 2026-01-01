@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using FluentAssertions;
+using Microsoft.EntityFrameworkCore;
 using PortfolioTracker.Core.DTOs.User;
 using PortfolioTracker.IntegrationTests.Fixtures;
 using PortfolioTracker.IntegrationTests.Helpers;
@@ -11,6 +12,8 @@ public class UsersControllerTests : IntegrationTestBase
     public UsersControllerTests(IntegrationTestWebAppFactory factory) : base(factory)
     {
     }
+
+    #region GET /api/users - Get
 
     [Fact]
     public async Task GetUsers_WhenNoUsers_ReturnsEmptyList()
@@ -84,4 +87,198 @@ public class UsersControllerTests : IntegrationTestBase
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
+
+    #endregion
+
+    #region POST /api/users - Create 
+
+    [Fact]
+    public async Task CreateUser_WithValidData_ReturnsCreatedUser()
+    {
+        // Arrange
+        var createUserDto = new CreateUserDto
+        {
+            Email = "preetham@test.com",
+            FullName = "Preetham K H",
+            Password = "SecurePassword123!"        
+        };
+
+        // Act
+        var response = await Client.PostAsJsonAsync("api/users", createUserDto);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
+
+        var createdUser = await response.ReadAsJsonAsync<UserDto>();
+        createdUser.Should().NotBeNull();
+        createdUser.Email.Should().Be("preetham@test.com");
+        createdUser.FullName.Should().Be("Preetham K H");
+        createdUser.Id.Should().NotBeEmpty();
+
+        // Verify user was actually created in the database
+        var userInDatabase = await Context.Users.FirstOrDefaultAsync(u => u.Id == createdUser.Id);
+        userInDatabase.Should().NotBeNull();
+        userInDatabase!.Email.Should().Be("preetham@test.com");
+    }
+
+    [Fact]
+    public async Task CreateUser_WithDuplicateEmail_ReturnsBadRequest()
+    {
+        // Arrange
+        // existing user with same email
+        await TestDataBuilder.CreateUser(Context, email: "preetham@test.com");
+
+        var createUserDto = new CreateUserDto
+        {
+            Email = "preetham@test.com",
+            FullName = "Preetham K H",
+            Password = "SecurePassword123!"
+        };
+
+        // Act
+        var response =  await Client.PostAsJsonAsync("api/users", createUserDto);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateUser_WithInvalidData_ReturnsBadRequest()
+    {
+        // Arrange
+        var createUserDto = new CreateUserDto
+        {
+            Email = "invalid-email-format",
+            Password = "short",
+            FullName = new string('A', 300) // Exceeds max length
+        };
+
+        // Act
+        var response = await Client.PostAsJsonAsync("api/users", createUserDto);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task CreateUser_WithMissingFields_ReturnsBadRequest()
+    {
+        // Arrange
+        var createUserDto = new CreateUserDto
+        {
+            Email = "preetham@test.com",
+            Password = "",
+            FullName = "Preetham K H"
+        };
+
+        // Act
+        var response = await Client.PostAsJsonAsync("api/users", createUserDto);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    #endregion
+
+    #region PUT /api/users/{userId} - Update 
+    
+    [Fact]
+    public async Task UpdateUser_WithValidData_ReturnsUpdatedUser()
+    {
+        // Arrange
+        var user = await TestDataBuilder
+        .CreateUser(Context, email: "preethamkh@test.com", fullName: "Preetham K H");
+
+        var updateUserDto = new UpdateUserDto
+        {
+            Email = "updatedemail@test.com",
+            FullName = "Updated Name"
+        };
+
+        // Act
+        var response = await Client.PutAsJsonAsync($"api/users/{user.Id}", updateUserDto);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var updatedUser = await response.ReadAsJsonAsync<UserDto>();
+        updatedUser.Should().NotBeNull();
+        updatedUser.Email.Should().Be("updatedemail@test.com");
+        updatedUser.FullName.Should().Be("Updated Name");
+        updatedUser.Id.Should().Be(user.Id);
+
+        // Force EF Core to reload the entity from the DB bypassing the cache.
+        // This is because when we update, if we use FindAsync() or similar on a context that already
+        // tracked the enitity, it may return the cached (pre-update) version, not the lates from the DB.
+        var userInDatabase = await Context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Id);
+        userInDatabase.Should().NotBeNull();
+        userInDatabase!.Email.Should().Be("updatedemail@test.com");
+        userInDatabase.FullName.Should().Be("Updated Name");
+    }
+
+    [Fact]
+    public async Task UpdateUser_WhenUserDoesNotExist_ReturnsNotFound()
+    {
+        // Arrange
+        var nonExistentUserId = Guid.NewGuid();
+
+        var updateUserDto = new UpdateUserDto
+        {
+            Email = "updatedemail@test.com",
+            FullName = "Updated Name"
+        };
+
+        // Act
+        var response = await Client.PutAsJsonAsync($"api/users/{nonExistentUserId}", updateUserDto);
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    #endregion
+
+    #region DELETE /api/users/{userId} - Delete
+
+    [Fact]
+    public async Task DeleteUser_WhenUserExists_ReturnsNoContent()
+    {
+        // Arrange
+        var user = await TestDataBuilder.CreateUser(Context, email: "preethamkh@test.com", fullName: "Preetham K H");
+
+        // Act
+        var response = await Client.DeleteAsync($"api/users/{user.Id}");
+
+        // Assert
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Verify user was deleted from the DB
+        var userInDatabase = await Context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Id);
+        userInDatabase.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task DeleteUser_WithPortfolios_DeletesCascade()
+    {
+        // ARRANGE
+        var user = await TestDataBuilder.CreateUser(Context);
+        var portfolio = await TestDataBuilder.CreatePortfolio(Context, user.Id);
+
+        // ACT - Delete user
+        var response = await Client.DeleteAsync($"/api/users/{user.Id}");
+
+        // ASSERT
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+
+        // Verify user deleted
+        var userInDb = await Context.Users.FindAsync(user.Id);
+        userInDb.Should().BeNull();
+
+        // Verify portfolio also deleted (cascade!)
+        var portfolioInDb = await Context.Portfolios.FindAsync(portfolio.Id);
+        portfolioInDb.Should().BeNull();
+    }
+
+
+    #endregion
+
 }
