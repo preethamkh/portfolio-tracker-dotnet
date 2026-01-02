@@ -1,7 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
+using PortfolioTracker.Core.DTOs.Auth;
 using PortfolioTracker.Infrastructure.Data;
 using PortfolioTracker.IntegrationTests.Fixtures;
+using PortfolioTracker.IntegrationTests.Helpers;
 
 namespace PortfolioTracker.IntegrationTests;
 
@@ -134,15 +135,87 @@ public abstract class IntegrationTestBase : IClassFixture<IntegrationTestWebAppF
     }
 
     /// <summary>
-    /// Checks if an entity exists in the database.
-    /// Always queries the database (bypasses cache).
+    /// Authenticates a user and sets the Authorization header for subsequent requests.
     /// </summary>
-    protected async Task<bool> ExistsInDb<T>(Guid id) where T : class
+    /// <param name="email">User email</param>
+    /// <param name="password">User password</param>
+    /// <returns>The authentication response with token and user info</returns>
+    protected async Task<AuthResponse> AuthenticateUserAsync(string email, string password)
     {
-        var entity = await Context.Set<T>()
-            .AsNoTracking()
-            .FirstOrDefaultAsync(e => EF.Property<Guid>(e, "Id") == id);
-        
-        return entity != null;
+        var loginRequest = new LoginRequest
+        {
+            Email = email,
+            Password = password
+        };
+
+        var response = await Client.PostAsJsonAsync("api/auth/login", loginRequest);
+
+        response.EnsureSuccessStatusCode();
+
+        var authResponse = await response.ReadAsJsonAsync<AuthResponse>();
+
+        // set token for subsequent requests
+        Client.DefaultRequestHeaders.Authorization = 
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
+
+        return authResponse;
     }
+
+    #region Additional Test Scaffolding
+
+    /// <summary>
+    /// Registers a new user via the API and authenticates them.
+    /// To help with tests that need an authenticated user simulating real API usage.
+    /// </summary>
+    /// <returns>The authentication response with token and user info</returns>
+    protected async Task<AuthResponse> RegisterAndAuthenticateAsync(
+        string? email = null,
+        string? password = null,
+        string? fullName = null)
+    {
+        email ??= $"test{Guid.NewGuid():N}@example.com";
+        password ??= "SecurePass123!";
+        fullName ??= "Test User";
+
+        var registerRequest = new RegisterRequest
+        {
+            Email = email,
+            Password = password,
+            FullName = fullName
+        };
+
+        var response = await Client.PostAsJsonAsync("/api/auth/register", registerRequest);
+        response.EnsureSuccessStatusCode();
+
+        var authResponse = await response.ReadAsJsonAsync<AuthResponse>();
+
+        // Set token for subsequent requests
+        Client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
+
+        return authResponse;
+    }
+
+    /// <summary>
+    /// Clears authentication (removes Authorization header).
+    /// </summary>
+    protected void ClearAuthentication()
+    {
+        Client.DefaultRequestHeaders.Authorization = null;
+    }
+
+    #endregion
+
+    ///// <summary>
+    ///// Checks if an entity exists in the database.
+    ///// Always queries the database (bypasses cache).
+    ///// </summary>
+    //protected async Task<bool> ExistsInDb<T>(Guid id) where T : class
+    //{
+    //    var entity = await Context.Set<T>()
+    //        .AsNoTracking()
+    //        .FirstOrDefaultAsync(e => EF.Property<Guid>(e, "Id") == id);
+
+    //    return entity != null;
+    //}
 }

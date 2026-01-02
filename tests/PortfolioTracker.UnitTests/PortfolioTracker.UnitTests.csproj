@@ -20,11 +20,16 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\PortfolioTracker.API\PortfolioTracker.API.csproj" />
     <ProjectReference Include="..\..\src\PortfolioTracker.Core\PortfolioTracker.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Extensions\" />
   </ItemGroup>
 
 </Project>

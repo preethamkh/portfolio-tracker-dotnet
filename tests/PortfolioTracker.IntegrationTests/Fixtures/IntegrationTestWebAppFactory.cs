@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Configuration;
 using PortfolioTracker.Infrastructure.Data;
 
 namespace PortfolioTracker.IntegrationTests.Fixtures;
@@ -44,8 +45,19 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>
     /// <param name="builder">The web host builder</param>
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        // Optional
+        // This sets ASPNETCORE_ENVIRONMENT to "Testing"
+        // Can use this in Program.cs to configure test-specific behavior
+        builder.UseEnvironment("Testing");
+        builder.UseContentRoot(AppContext.BaseDirectory);
+
         // Call the base method to ensure default configuration
         base.ConfigureWebHost(builder);
+
+        builder.ConfigureAppConfiguration((context, config) =>
+        {
+            config.AddJsonFile("appsettings.Testing.json", optional: false, reloadOnChange: true);
+        });
 
         // Override services for testing
         builder.ConfigureServices(services =>
@@ -88,10 +100,5 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>
             // Similar to running migrations, but for in-memory DB
             dbContext.Database.EnsureCreated();
         });
-
-        // Optional
-        // This sets ASPNETCORE_ENVIRONMENT to "Testing"
-        // Can use this in Program.cs to configure test-specific behavior
-        builder.UseEnvironment("Testing");
     }
 }

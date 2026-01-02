@@ -7,22 +7,19 @@ using System.Net;
 
 namespace PortfolioTracker.IntegrationTests.API;
 
-public class PortfoliosControllerTests : IntegrationTestBase
+public class PortfoliosControllerTests(IntegrationTestWebAppFactory factory) : IntegrationTestBase(factory)
 {
-    public PortfoliosControllerTests(IntegrationTestWebAppFactory factory) : base(factory)
-    {
-    }
-
     #region GET /api/users/{userId}/portfolios - Get User Portfolios
 
     [Fact]
     public async Task GetUserPortfolios_WhenNoPortfolios_ReturnsEmptyList()
     {
-        // Arrange
-        var user = await TestDataBuilder.CreateUser(Context);
+        // Arrange: Register and authenticate a user
+        var authResponse = await RegisterAndAuthenticateAsync();
+        var userId = authResponse.User.Id;
 
         // Act
-        var response = await Client.GetAsync($"/api/users/{user.Id}/portfolios");
+        var response = await Client.GetAsync($"/api/users/{userId}/portfolios");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -36,10 +33,12 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task GetUserPortfolios_WhenPortfoliosExist_ReturnsOnlyUserPortfolios()
     {
         // Arrange
-        var userWithPortfolios = await TestDataBuilder.CreateUserWithPortfolios(Context, 3);
+        var userId = (await RegisterAndAuthenticateAsync()).User.Id;
+
+        await TestDataBuilder.CreatePortfolios(Context, userId, 3);
 
         // Act
-        var response = await Client.GetAsync($"/api/users/{userWithPortfolios.Id}/portfolios");
+        var response = await Client.GetAsync($"/api/users/{userId}/portfolios");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -47,20 +46,21 @@ public class PortfoliosControllerTests : IntegrationTestBase
         var portfolios = await response.ReadAsJsonAsync<List<PortfolioDto>>();
         portfolios.Should().NotBeNull();
         portfolios.Should().HaveCount(3);
-        portfolios.Should().OnlyContain(p => p.UserId == userWithPortfolios.Id);
+        portfolios.Should().OnlyContain(p => p.UserId == userId);
     }
 
     [Fact]
     public async Task GetUserPortfolios_WhenPortfoliosExist_OrdersByDefaultFirstThenName()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context);
-        await TestDataBuilder.CreatePortfolio(Context, user.Id, "Savings", isDefault: false);
-        await TestDataBuilder.CreatePortfolio(Context, user.Id, "Day Trading", isDefault: false);
-        await TestDataBuilder.CreatePortfolio(Context, user.Id, "Retirement", isDefault: true);
+        var userId = (await RegisterAndAuthenticateAsync()).User.Id;
+
+        await TestDataBuilder.CreatePortfolio(Context, userId, "Savings", isDefault: false);
+        await TestDataBuilder.CreatePortfolio(Context, userId, "Day Trading", isDefault: false);
+        await TestDataBuilder.CreatePortfolio(Context, userId, "Retirement", isDefault: true);
 
         // Act
-        var response = await Client.GetAsync($"/api/users/{user.Id}/portfolios");
+        var response = await Client.GetAsync($"/api/users/{userId}/portfolios");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -84,11 +84,11 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task GetPortfolio_WhenExists_ReturnsPortfolio()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context);
-        var portfolio = await TestDataBuilder.CreatePortfolio(Context, user.Id, "Retirement");
+        var userId = (await RegisterAndAuthenticateAsync()).User.Id;
+        var portfolio = await TestDataBuilder.CreatePortfolio(Context, userId, "Retirement");
 
         // Act
-        var response = await Client.GetAsync($"/api/users/{user.Id}/portfolios/{portfolio.Id}");
+        var response = await Client.GetAsync($"/api/users/{userId}/portfolios/{portfolio.Id}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -97,18 +97,18 @@ public class PortfoliosControllerTests : IntegrationTestBase
         returnedPortfolio.Should().NotBeNull();
         returnedPortfolio.Id.Should().Be(portfolio.Id);
         returnedPortfolio.Name.Should().Be("Retirement");
-        returnedPortfolio.UserId.Should().Be(user.Id);
+        returnedPortfolio.UserId.Should().Be(userId);
     }
 
     [Fact]
     public async Task GetPortfolio_WhenDoesNotExist_ReturnsNotFound()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context);
+        var userId = (await RegisterAndAuthenticateAsync()).User.Id;
         var nonExistentId = Guid.NewGuid();
 
         // Act
-        var response = await Client.GetAsync($"/api/users/{user.Id}/portfolios/{nonExistentId}");
+        var response = await Client.GetAsync($"/api/users/{userId}/portfolios/{nonExistentId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -118,12 +118,12 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task GetPortfolio_WhenBelongsToOtherUser_ReturnsNotFound()
     {
         // Arrange - Authorization test
-        var user1 = await TestDataBuilder.CreateUser(Context);
-        var user2 = await TestDataBuilder.CreateUser(Context);
-        var user1Portfolio = await TestDataBuilder.CreatePortfolio(Context, user1.Id);
+        var user1Id = (await RegisterAndAuthenticateAsync()).User.Id;
+        var user2Id = (await RegisterAndAuthenticateAsync()).User.Id;
+        var user1Portfolio = await TestDataBuilder.CreatePortfolio(Context, user1Id);
 
         // Act - User2 tries to access User1's portfolio
-        var response = await Client.GetAsync($"/api/users/{user2.Id}/portfolios/{user1Portfolio.Id}");
+        var response = await Client.GetAsync($"/api/users/{user2Id}/portfolios/{user1Portfolio.Id}");
 
         // Assert - Should not find it (authorization check)
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -137,12 +137,12 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task GetDefaultPortfolio_WhenExists_ReturnsDefaultPortfolio()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context);
-        await TestDataBuilder.CreatePortfolio(Context, user.Id, "Retirement", isDefault: true);
-        await TestDataBuilder.CreatePortfolio(Context, user.Id, "Savings", isDefault: false);
+        var userId = (await RegisterAndAuthenticateAsync()).User.Id;
+        await TestDataBuilder.CreatePortfolio(Context, userId, "Retirement", isDefault: true);
+        await TestDataBuilder.CreatePortfolio(Context, userId, "Savings", isDefault: false);
 
         // Act
-        var response = await Client.GetAsync($"/api/users/{user.Id}/portfolios/default");
+        var response = await Client.GetAsync($"/api/users/{userId}/portfolios/default");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -157,11 +157,11 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task GetDefaultPortfolio_WhenDoesNotExist_ReturnsNotFound()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context);
-        await TestDataBuilder.CreatePortfolio(Context, user.Id, "Savings", isDefault: false);
+        var userId = (await RegisterAndAuthenticateAsync()).User.Id;
+        await TestDataBuilder.CreatePortfolio(Context, userId, "Savings", isDefault: false);
 
         // Act
-        var response = await Client.GetAsync($"/api/users/{user.Id}/portfolios/default");
+        var response = await Client.GetAsync($"/api/users/{userId}/portfolios/default");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -175,7 +175,7 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task CreatePortfolio_WithValidData_ReturnsCreatedPortfolio()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context);
+        var userId = (await RegisterAndAuthenticateAsync()).User.Id;
         var createDto = new CreatePortfolioDto
         {
             Name = "My Portfolio",
@@ -185,7 +185,7 @@ public class PortfoliosControllerTests : IntegrationTestBase
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/users/{user.Id}/portfolios", createDto);
+        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/portfolios", createDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -194,7 +194,7 @@ public class PortfoliosControllerTests : IntegrationTestBase
         createdPortfolio.Should().NotBeNull();
         createdPortfolio.Name.Should().Be("My Portfolio");
         createdPortfolio.IsDefault.Should().BeTrue();
-        createdPortfolio.UserId.Should().Be(user.Id);
+        createdPortfolio.UserId.Should().Be(userId);
 
         // Verify in database (bypass cache)
         var portfolioInDb = await Context.Portfolios
@@ -209,8 +209,8 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task CreatePortfolio_WithDuplicateName_ReturnsBadRequest()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context);
-        await TestDataBuilder.CreatePortfolio(Context, user.Id, name: "Retirement");
+        var userId = (await RegisterAndAuthenticateAsync()).User.Id;
+        await TestDataBuilder.CreatePortfolio(Context, userId, name: "Retirement");
 
         var createPortfolioDto = new CreatePortfolioDto
         {
@@ -220,7 +220,7 @@ public class PortfoliosControllerTests : IntegrationTestBase
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/users/{user.Id}/portfolios", createPortfolioDto);
+        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/portfolios", createPortfolioDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -233,10 +233,10 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task CreatePortfolio_DifferentUsersSameNameAllowed()
     {
         // Arrange - Business rule: Different users CAN have the same portfolio name
-        var user1 = await TestDataBuilder.CreateUser(Context);
-        var user2 = await TestDataBuilder.CreateUser(Context);
+        var user1Id = (await RegisterAndAuthenticateAsync()).User.Id;
+        var user2Id = (await RegisterAndAuthenticateAsync()).User.Id;
 
-        await TestDataBuilder.CreatePortfolio(Context, user1.Id, name: "Retirement");
+        await TestDataBuilder.CreatePortfolio(Context, user1Id, name: "Retirement");
 
         var createPortfolioDto = new CreatePortfolioDto
         {
@@ -246,7 +246,7 @@ public class PortfoliosControllerTests : IntegrationTestBase
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/users/{user2.Id}/portfolios", createPortfolioDto);
+        var response = await Client.PostAsJsonAsync($"/api/users/{user2Id}/portfolios", createPortfolioDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -256,8 +256,8 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task CreatePortfolio_AsDefault_UnsetsOtherDefaults()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context);
-        var existingDefault = await TestDataBuilder.CreatePortfolio(Context, user.Id,
+        var userId = (await RegisterAndAuthenticateAsync()).User.Id;
+        var existingDefault = await TestDataBuilder.CreatePortfolio(Context, userId,
             name: "Old Default",
             isDefault: true);
 
@@ -270,7 +270,7 @@ public class PortfoliosControllerTests : IntegrationTestBase
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/users/{user.Id}/portfolios", createDto);
+        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/portfolios", createDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -294,8 +294,8 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task UpdatePortfolio_WithValidData_ReturnsUpdatedPortfolio()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context);
-        var portfolio = await TestDataBuilder.CreatePortfolio(Context, user.Id,
+        var userId = (await RegisterAndAuthenticateAsync()).User.Id;
+        var portfolio = await TestDataBuilder.CreatePortfolio(Context, userId,
             name: "Old Name",
             description: "Old Description");
 
@@ -306,7 +306,7 @@ public class PortfoliosControllerTests : IntegrationTestBase
         };
 
         // Act
-        var response = await Client.PutAsJsonAsync($"/api/users/{user.Id}/portfolios/{portfolio.Id}", updatePortfolioDto);
+        var response = await Client.PutAsJsonAsync($"/api/users/{userId}/portfolios/{portfolio.Id}", updatePortfolioDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -326,14 +326,14 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task UpdatePortfolio_WhenBelongsToOtherUser_ReturnsNotFound()
     {
         // Arrange
-        var user1 = await TestDataBuilder.CreateUser(Context);
-        var user2 = await TestDataBuilder.CreateUser(Context);
-        var user1Portfolio = await TestDataBuilder.CreatePortfolio(Context, user1.Id);
+        var user1Id = (await RegisterAndAuthenticateAsync()).User.Id;
+        var user2Id = (await RegisterAndAuthenticateAsync()).User.Id;
+        var user1Portfolio = await TestDataBuilder.CreatePortfolio(Context, user1Id);
 
         var updateDto = new UpdatePortfolioDto { Name = "Hacked Name" };
 
         // Act - User2 tries to update User1's portfolio
-        var response = await Client.PutAsJsonAsync($"/api/users/{user2.Id}/portfolios/{user1Portfolio.Id}", updateDto);
+        var response = await Client.PutAsJsonAsync($"/api/users/{user2Id}/portfolios/{user1Portfolio.Id}", updateDto);
 
         // Assert - Should not find it (authorization check)
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -354,11 +354,11 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task DeletePortfolio_WhenExists_ReturnsNoContent()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context);
-        var portfolio = await TestDataBuilder.CreatePortfolio(Context, user.Id);
+        var userId = (await RegisterAndAuthenticateAsync()).User.Id;
+        var portfolio = await TestDataBuilder.CreatePortfolio(Context, userId);
 
         // Act
-        var response = await Client.DeleteAsync($"/api/users/{user.Id}/portfolios/{portfolio.Id}");
+        var response = await Client.DeleteAsync($"/api/users/{userId}/portfolios/{portfolio.Id}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -375,12 +375,12 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task DeletePortfolio_WhenBelongsToOtherUser_ReturnsNotFound()
     {
         // Arrange
-        var user1 = await TestDataBuilder.CreateUser(Context);
-        var user2 = await TestDataBuilder.CreateUser(Context);
-        var user1Portfolio = await TestDataBuilder.CreatePortfolio(Context, user1.Id);
+        var user1Id = (await RegisterAndAuthenticateAsync()).User.Id;
+        var user2Id = (await RegisterAndAuthenticateAsync()).User.Id;
+        var user1Portfolio = await TestDataBuilder.CreatePortfolio(Context, user1Id);
 
         // ACT - User2 tries to delete User1's portfolio
-        var response = await Client.DeleteAsync($"/api/users/{user2.Id}/portfolios/{user1Portfolio.Id}");
+        var response = await Client.DeleteAsync($"/api/users/{user2Id}/portfolios/{user1Portfolio.Id}");
 
         // Assert - Should not find it (authorization check)
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -401,13 +401,13 @@ public class PortfoliosControllerTests : IntegrationTestBase
     public async Task SetAsDefault_UnsetsOtherDefaults()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context);
-        var retirementPortfolio = await TestDataBuilder.CreatePortfolio(Context, user.Id, "Retirement", isDefault: false);
-        var savingsPortfolio = await TestDataBuilder.CreatePortfolio(Context, user.Id, "Savings", isDefault: true);
+        var userId = (await RegisterAndAuthenticateAsync()).User.Id;
+        var retirementPortfolio = await TestDataBuilder.CreatePortfolio(Context, userId, "Retirement", isDefault: false);
+        var savingsPortfolio = await TestDataBuilder.CreatePortfolio(Context, userId, "Savings", isDefault: true);
 
         // Act - Set portfolio2 as default
         var response = await Client.PostAsync(
-            $"/api/users/{user.Id}/portfolios/{retirementPortfolio.Id}/set-default",
+            $"/api/users/{userId}/portfolios/{retirementPortfolio.Id}/set-default",
             null);
 
         // Assert

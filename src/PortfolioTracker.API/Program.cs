@@ -1,4 +1,8 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using PortfolioTracker.Core.Configuration;
 using PortfolioTracker.Core.Interfaces.Repositories;
 using PortfolioTracker.Core.Interfaces.Services;
 using PortfolioTracker.Core.Services;
@@ -9,6 +13,14 @@ using Exception = System.Exception;
 using Results = Microsoft.AspNetCore.Http.Results;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Configure services and middleware
+// Bind Jwt settings from configuration
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
+
+// Get JWT settings for authentication configuration
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<JwtSettings>()
+                  ?? throw new InvalidOperationException("JWT settings not configured");
 
 // Add services to the container.
 
@@ -41,6 +53,53 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     }
 });
 
+// Authentication and Authorization
+// Configure JWT Authentication
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings.Issuer,
+        ValidAudience = jwtSettings.Audience,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
+        // todo: 5 mins or zero?
+        ClockSkew = TimeSpan.Zero // No clock skew
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnAuthenticationFailed = context =>
+        {
+            //if (context.Exception.GetType() == typeof(SecurityTokenExpiredException))
+            //{
+            //    context.Response.Headers.Add("Token-Expired", "true");
+            //}
+
+            // Log authentication failures
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogError(context.Exception, "Authentication failed");
+            return Task.CompletedTask;
+        },
+        OnTokenValidated = context =>
+        {
+            // Log successful token validation
+            var logger = context.HttpContext.RequestServices.GetRequiredService<ILogger<Program>>();
+            logger.LogInformation("Token validated for {User}", context.Principal?.Identity?.Name);
+            return Task.CompletedTask;
+        }
+    };
+});
+
+builder.Services.AddAuthorization();
 
 // DI order does not matter as long as all dependencies are registered before they are used.
 
@@ -53,6 +112,8 @@ builder.Services.AddScoped<IPortfolioRepository, PortfolioRepository>();
 // Register Services (Business Logic Layer)
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPortfolioService, PortfolioService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 
 builder.Services.AddControllers();
 
@@ -60,16 +121,43 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
-    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo()
+    options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
     {
         Title = "Portfolio Tracker API",
         Version = "v1",
         Description = "API for tracking investment portfolios, tracking stocks and analyzing performance",
-        Contact = new Microsoft.OpenApi.Models.OpenApiContact()
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
         {
             Name = "Preetham K H",
             Email = "x@gmail.com",
             Url = new Uri("https://github.com/preethamkh/porfolio-tracker-dotnet")
+        }
+    });
+
+    // Add JWT authentication to Swagger UI
+    // todo: add to other endpoints and controllers as well?
+    options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = Microsoft.OpenApi.Models.SecuritySchemeType.Http,
+        Scheme = "Bearer",
+        BearerFormat = "JWT",
+        In = Microsoft.OpenApi.Models.ParameterLocation.Header,
+        Description = "Enter 'Bearer' followed by a space and your JWT token"
+    });
+
+    options.AddSecurityRequirement(new Microsoft.OpenApi.Models.OpenApiSecurityRequirement
+    {
+        {
+            new Microsoft.OpenApi.Models.OpenApiSecurityScheme
+            {
+                Reference = new Microsoft.OpenApi.Models.OpenApiReference
+                {
+                    Type = Microsoft.OpenApi.Models.ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            Array.Empty<string>()
         }
     });
 });
@@ -111,8 +199,10 @@ app.UseHttpsRedirection();
 // Enable CORS
 app.UseCors("AllowReactApp");
 
-// Enable authorization (todo: add authentication later)
-app.UseAuthorization();
+// Enable Authentication and Authorization
+// Authentication must come before Authorization
+app.UseAuthentication(); // validates JWT token
+app.UseAuthorization(); // checks user permissions [Authorize]
 
 // Map controller endpoints
 app.MapControllers();

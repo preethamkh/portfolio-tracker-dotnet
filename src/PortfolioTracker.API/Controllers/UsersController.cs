@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using PortfolioTracker.API.Extensions;
 using PortfolioTracker.Core.DTOs.User;
 using PortfolioTracker.Core.Interfaces.Services;
 
@@ -25,6 +27,7 @@ namespace PortfolioTracker.API.Controllers;
 /// </remarks>
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public class UsersController : ControllerBase
 {
     private readonly IUserService _userService;
@@ -59,21 +62,31 @@ public class UsersController : ControllerBase
     /// <summary>
     /// Get a specific user by ID
     /// </summary>
-    /// <param name="id">User ID</param>
+    /// <param name="userId">User ID</param>
     /// <returns>User details</returns>
     // Adding constraint (guid) to the route parameter
-    [HttpGet("{id:guid}")]
+    [HttpGet("{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    // todo: add 403 test cases for the auth checks in this and other methods
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<UserDto>> GetUser(Guid id)
+    public async Task<ActionResult<UserDto>> GetUser(Guid userId)
     {
-        _logger.LogInformation("GET /api/users/{UserId}", id);
+        _logger.LogInformation("GET /api/users/{UserId}", userId);
 
-        var user = await _userService.GetUserByIdAsync(id);
+        // Authorization: User can only access their own data
+        if (!User.IsAuthorizedForUser(userId))
+        {
+            _logger.LogWarning("User {GetAuthenticatedUserId} attempted to access user {UserId}", User.GetAuthenticatedUserId(), userId);
+
+            return Forbid();
+        }
+
+        var user = await _userService.GetUserByIdAsync(userId);
 
         if (user == null)
         {
-            return NotFound(new { message = $"User with ID {id} not found" });
+            return NotFound(new { message = $"User with ID {userId} not found" });
         }
 
         return Ok(user);
@@ -85,6 +98,7 @@ public class UsersController : ControllerBase
     /// <param name="createUserDto">User registration details</param>
     /// <returns>Created user</returns>
     [HttpPost]
+    [AllowAnonymous]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<UserDto>> CreateUser([FromBody] CreateUserDto createUserDto)
@@ -104,7 +118,7 @@ public class UsersController : ControllerBase
             // Return 201 Created with location header
             return CreatedAtAction(
                 nameof(GetUser),
-                new { id = user!.Id },
+                new { userId = user!.Id },
                 user
             );
         }
@@ -119,16 +133,24 @@ public class UsersController : ControllerBase
     /// <summary>
     /// Update user details.
     /// </summary>
-    /// <param name="id">User ID</param>
+    /// <param name="userId">User ID</param>
     /// <param name="updateUserDto">Updated user details</param>
     /// <returns>Updated user</returns>
-    [HttpPut("{id:guid}")]
+    [HttpPut("{userId:guid}")]
     [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<UserDto>> UpdateUser(Guid id, [FromBody] UpdateUserDto updateUserDto)
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserDto>> UpdateUser(Guid userId, [FromBody] UpdateUserDto updateUserDto)
     {
-        _logger.LogInformation("PUT /api/users/{UserId}", id);
+        _logger.LogInformation("PUT /api/users/{UserId}", userId);
+
+        if (!User.IsAuthorizedForUser(userId))
+        {
+            _logger.LogWarning("User {GetAuthenticatedUserId} attempted to update user {UserId}", User.GetAuthenticatedUserId(), userId);
+
+            return Forbid();
+        }
 
         if (!ModelState.IsValid)
         {
@@ -137,11 +159,11 @@ public class UsersController : ControllerBase
 
         try
         {
-            var user = await _userService.UpdateUserAsync(id, updateUserDto);
+            var user = await _userService.UpdateUserAsync(userId, updateUserDto);
 
             if (user == null)
             {
-                return NotFound(new { message = $"User with ID {id} not found" });
+                return NotFound(new { message = $"User with ID {userId} not found" });
             }
 
             return Ok(user);
@@ -156,20 +178,27 @@ public class UsersController : ControllerBase
     /// <summary>
     /// Delete a user.
     /// </summary>
-    /// <param name="id">User ID</param>
+    /// <param name="userId">User ID</param>
     /// <returns>No content</returns>
-    [HttpDelete("{id:guid}")]
+    [HttpDelete("{userId:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> DeleteUser(Guid id)
+    public async Task<IActionResult> DeleteUser(Guid userId)
     {
-        _logger.LogInformation("DELETE /api/users/{UserId}", id);
+        _logger.LogInformation("DELETE /api/users/{UserId}", userId);
 
-        var deleted = await _userService.DeleteUserAsync(id);
+        if (!User.IsAuthorizedForUser(userId))
+        {
+            _logger.LogWarning("User {GetAuthenticatedUserId} attempted to delete user {UserId}", User.GetAuthenticatedUserId(), userId);
+
+            return Forbid();
+        }
+
+        var deleted = await _userService.DeleteUserAsync(userId);
 
         if (!deleted)
         {
-            return NotFound(new { message = $"User with ID {id} not found" });
+            return NotFound(new { message = $"User with ID {userId} not found" });
         }
 
         return NoContent();
