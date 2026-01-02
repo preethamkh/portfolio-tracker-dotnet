@@ -416,6 +416,7 @@ FodyWeavers.xsd
 appsettings.Development.json
 appsettings.*.json
 !appsettings.json
+!appsettings.Testing.json
 
 # Database
 *.db
