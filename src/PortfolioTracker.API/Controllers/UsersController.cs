@@ -118,7 +118,7 @@ public class UsersController : ControllerBase
             // Return 201 Created with location header
             return CreatedAtAction(
                 nameof(GetUser),
-                new { id = user!.Id },
+                new { userId = user!.Id },
                 user
             );
         }

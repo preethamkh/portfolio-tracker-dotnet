@@ -16,20 +16,6 @@ public class UsersControllerTests : IntegrationTestBase
     #region GET /api/users - Get
 
     [Fact]
-    public async Task GetUsers_WhenNoUsers_ReturnsEmptyList()
-    {
-        // Act
-        var response = await Client.GetAsync("/api/users");
-
-        // Assert
-        response.StatusCode.Should().Be(HttpStatusCode.OK);
-
-        var users = await response.ReadAsJsonAsync<List<UserDto>>();
-        users.Should().NotBeNull();
-        users.Should().BeEmpty();
-    }
-
-    [Fact]
     public async Task GetUsers_WhenUsersExist_ReturnsUserList()
     {
         // Arrange
@@ -37,6 +23,9 @@ public class UsersControllerTests : IntegrationTestBase
         await TestDataBuilder.CreateUser(Context, email: "user1@test.com");
         await TestDataBuilder.CreateUser(Context, email: "user2@test.com");
         await TestDataBuilder.CreateUser(Context, email: "user3@test.com");
+
+        // Authenticate as any user to access the endpoint
+        await RegisterAndAuthenticateAsync();
 
         // Act
         // Point to Note:
@@ -48,7 +37,7 @@ public class UsersControllerTests : IntegrationTestBase
 
         var users = await response.ReadAsJsonAsync<List<UserDto>>();
         users.Should().NotBeNull();
-        users.Should().HaveCount(3);
+        users.Should().HaveCount(4); // 3 created + 1 authenticated
 
         // Verify returned users match created users
         users.Should().Contain(u => u.Email == "user1@test.com");
@@ -60,17 +49,17 @@ public class UsersControllerTests : IntegrationTestBase
     public async Task GetUser_WhenUserExists_ReturnsUser()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context, email: "preetham@test.com", fullName: "Preetham K H");
+        var authResponse = await RegisterAndAuthenticateAsync(email: "preetham@test.com", fullName: "Preetham K H");
 
         // Act
-        var response = await Client.GetAsync($"/api/users/{user.Id}");
+        var response = await Client.GetAsync($"/api/users/{authResponse.User.Id}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
 
         var returnedUser = await response.ReadAsJsonAsync<UserDto>();
         returnedUser.Should().NotBeNull();
-        returnedUser.Id.Should().Be(user.Id);
+        returnedUser.Id.Should().Be(authResponse.User.Id);
         returnedUser.Email.Should().Be("preetham@test.com");
         returnedUser.FullName.Should().Be("Preetham K H");
     }
@@ -78,11 +67,17 @@ public class UsersControllerTests : IntegrationTestBase
     [Fact]
     public async Task GetUser_WhenUserDoesNotExist_ReturnsNotFound()
     {
-        // Arrange
-        var nonExistentUserId = Guid.NewGuid();
+        // Arrange: Register and authenticate a user
+        var authResponse = await RegisterAndAuthenticateAsync();
+        var userId = authResponse.User.Id;
 
-        // Act
-        var response = await Client.GetAsync($"/api/users/{nonExistentUserId}");
+        // Delete the user directly from the DB
+        var user = await Context.Users.FindAsync(userId);
+        Context.Users.Remove(user!);
+        await Context.SaveChangesAsync();
+
+        // Act: Try to get the deleted user (your own userId, but no longer exists)
+        var response = await Client.GetAsync($"/api/users/{userId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -186,8 +181,8 @@ public class UsersControllerTests : IntegrationTestBase
     public async Task UpdateUser_WithValidData_ReturnsUpdatedUser()
     {
         // Arrange
-        var user = await TestDataBuilder
-        .CreateUser(Context, email: "preethamkh@test.com", fullName: "Preetham K H");
+        var authResponse = await RegisterAndAuthenticateAsync();
+        var userId = authResponse.User.Id;
 
         var updateUserDto = new UpdateUserDto
         {
@@ -196,7 +191,7 @@ public class UsersControllerTests : IntegrationTestBase
         };
 
         // Act
-        var response = await Client.PutAsJsonAsync($"api/users/{user.Id}", updateUserDto);
+        var response = await Client.PutAsJsonAsync($"api/users/{userId}", updateUserDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.OK);
@@ -205,12 +200,12 @@ public class UsersControllerTests : IntegrationTestBase
         updatedUser.Should().NotBeNull();
         updatedUser.Email.Should().Be("updatedemail@test.com");
         updatedUser.FullName.Should().Be("Updated Name");
-        updatedUser.Id.Should().Be(user.Id);
+        updatedUser.Id.Should().Be(userId);
 
         // Force EF Core to reload the entity from the DB bypassing the cache.
         // This is because when we update, if we use FindAsync() or similar on a context that already
         // tracked the enitity, it may return the cached (pre-update) version, not the lates from the DB.
-        var userInDatabase = await Context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Id);
+        var userInDatabase = await Context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
         userInDatabase.Should().NotBeNull();
         userInDatabase.Email.Should().Be("updatedemail@test.com");
         userInDatabase.FullName.Should().Be("Updated Name");
@@ -220,7 +215,16 @@ public class UsersControllerTests : IntegrationTestBase
     public async Task UpdateUser_WhenUserDoesNotExist_ReturnsNotFound()
     {
         // Arrange
-        var nonExistentUserId = Guid.NewGuid();
+        //var nonExistentUserId = Guid.NewGuid();
+
+        // Arrange: Register and authenticate a user
+        var authResponse = await RegisterAndAuthenticateAsync();
+        var userId = authResponse.User.Id;
+
+        // Delete the user directly from the DB
+        var user = await Context.Users.FindAsync(userId);
+        Context.Users.Remove(user!);
+        await Context.SaveChangesAsync();
 
         var updateUserDto = new UpdateUserDto
         {
@@ -228,8 +232,8 @@ public class UsersControllerTests : IntegrationTestBase
             FullName = "Updated Name"
         };
 
-        // Act
-        var response = await Client.PutAsJsonAsync($"api/users/{nonExistentUserId}", updateUserDto);
+        // Act - on the non-existent user
+        var response = await Client.PutAsJsonAsync($"api/users/{userId}", updateUserDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
@@ -243,16 +247,17 @@ public class UsersControllerTests : IntegrationTestBase
     public async Task DeleteUser_WhenUserExists_ReturnsNoContent()
     {
         // Arrange
-        var user = await TestDataBuilder.CreateUser(Context, email: "preethamkh@test.com", fullName: "Preetham K H");
+        var authResponse = await RegisterAndAuthenticateAsync();
+        var userId = authResponse.User.Id;
 
         // Act
-        var response = await Client.DeleteAsync($"api/users/{user.Id}");
+        var response = await Client.DeleteAsync($"api/users/{userId}");
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
 
         // Verify user was deleted from the DB
-        var userInDatabase = await Context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == user.Id);
+        var userInDatabase = await Context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
         userInDatabase.Should().BeNull();
     }
 
@@ -261,11 +266,13 @@ public class UsersControllerTests : IntegrationTestBase
     public async Task DeleteUser_WithPortfolios_DeletesCascade()
     {
         // ARRANGE
-        var user = await TestDataBuilder.CreateUser(Context);
-        var portfolio = await TestDataBuilder.CreatePortfolio(Context, user.Id);
+        var authResponse = await RegisterAndAuthenticateAsync();
+        var userId = authResponse.User.Id;
+
+        var portfolio = await TestDataBuilder.CreatePortfolio(Context, userId);
 
         // ACT - Delete user
-        var response = await Client.DeleteAsync($"/api/users/{user.Id}");
+        var response = await Client.DeleteAsync($"/api/users/{userId}");
 
         // ASSERT
         response.StatusCode.Should().Be(HttpStatusCode.NoContent);
@@ -275,7 +282,7 @@ public class UsersControllerTests : IntegrationTestBase
         // Verify user deleted - FindAsync() checks cache first, so use ReloadFromDb to force fresh query
         // var userInDb = await Context.Users.FindAsync(user.Id);
 
-        var userInDatabase = await ReloadFromDb(user);
+        var userInDatabase = await ReloadFromDb(authResponse.User);
         userInDatabase.Should().BeNull();
 
         // Verify portfolio also deleted (cascade!)
