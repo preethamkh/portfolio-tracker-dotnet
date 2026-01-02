@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using PortfolioTracker.API.Extensions;
 using PortfolioTracker.Core.DTOs.Portfolio;
 using PortfolioTracker.Core.Interfaces.Services;
 
@@ -17,6 +19,7 @@ namespace PortfolioTracker.API.Controllers;
 /// </remarks>
 [ApiController]
 [Route("api/users/{userId}/portfolios")]
+[Authorize]
 public class PortfoliosController : ControllerBase
 {
     private readonly IPortfolioService _portfolioService;
@@ -41,6 +44,13 @@ public class PortfoliosController : ControllerBase
     {
         _logger.LogInformation("GET /api/users/{UserId}/portfolios", userId);
 
+        if (!User.IsAuthorizedForUser(userId))
+        {
+            _logger.LogWarning("User {AuthUserId} attempted to access portfolios for user {RequestedUserId}",
+                User.GetAuthenticatedUserId(), userId);
+            return Forbid();
+        }
+
         var portfolios = await _portfolioService.GetUserPortfoliosAsync(userId);
 
         return Ok(portfolios);
@@ -50,16 +60,23 @@ public class PortfoliosController : ControllerBase
     /// Get a specific portfolio by ID.
     /// </summary>
     /// <param name="userId">User ID from route</param>
-    /// <param name="id">Portfolio ID</param>
+    /// <param name="portfolioId">Portfolio ID</param>
     /// <returns>Portfolio details</returns>
-    [HttpGet("{id}")]
+    [HttpGet("{portfolioId}")]
     [ProducesResponseType(typeof(PortfolioDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<PortfolioDto>> GetPortfolio(Guid userId, Guid id)
+    public async Task<ActionResult<PortfolioDto>> GetPortfolio(Guid userId, Guid portfolioId)
     {
-        _logger.LogInformation("GET /api/users/{UserId}/portfolios/{PortfolioId}", userId, id);
+        _logger.LogInformation("GET /api/users/{UserId}/portfolios/{PortfolioId}", userId, portfolioId);
 
-        var portfolio = await _portfolioService.GetPortfolioByIdAsync(id, userId);
+        if (!User.IsAuthorizedForUser(userId))
+        {
+            _logger.LogWarning("User {AuthUserId} attempted to access portfolio {PortfolioId} for user {RequestedUserId}",
+                User.GetAuthenticatedUserId(), portfolioId, userId);
+            return Forbid();
+        }
+
+        var portfolio = await _portfolioService.GetPortfolioByIdAsync(portfolioId, userId);
 
         if (portfolio == null)
         {
@@ -107,6 +124,13 @@ public class PortfoliosController : ControllerBase
         _logger.LogInformation("POST /api/users/{UserId}/portfolios - Creating: {Name}",
             userId, createPortfolioDto.Name);
 
+        if (!User.IsAuthorizedForUser(userId))
+        {
+            _logger.LogWarning("User {AuthUserId} attempted to create portfolio for user {RequestedUserId}",
+                User.GetAuthenticatedUserId(), userId);
+            return Forbid();
+        }
+
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -147,6 +171,13 @@ public class PortfoliosController : ControllerBase
     {
         _logger.LogInformation("PUT /api/users/{UserId}/portfolios/{PortfolioId}", userId, portfolioId);
 
+        if (!User.IsAuthorizedForUser(userId))
+        {
+            _logger.LogWarning("User {AuthUserId} attempted to update portfolio {PortfolioId} for user {RequestedUserId}",
+                User.GetAuthenticatedUserId(), portfolioId, userId);
+            return Forbid();
+        }
+
         if (!ModelState.IsValid)
         {
             return BadRequest(ModelState);
@@ -182,6 +213,13 @@ public class PortfoliosController : ControllerBase
     public async Task<IActionResult> DeletePortfolio(Guid userId, Guid portfolioId)
     {
         _logger.LogInformation("DELETE /api/users/{UserId}/portfolios/{PortfolioId}", userId, portfolioId);
+
+        if (!User.IsAuthorizedForUser(userId))
+        {
+            _logger.LogWarning("User {AuthUserId} attempted to set default portfolio {PortfolioId} for user {RequestedUserId}",
+                User.GetAuthenticatedUserId(), portfolioId, userId);
+            return Forbid();
+        }
 
         var deleted = await _portfolioService.DeletePortfolioAsync(portfolioId, userId);
 
