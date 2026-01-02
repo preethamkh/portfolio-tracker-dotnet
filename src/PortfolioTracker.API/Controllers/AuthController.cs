@@ -2,6 +2,7 @@
 using PortfolioTracker.Core.DTOs.Authentication;
 using PortfolioTracker.Core.Interfaces.Services;
 using Microsoft.AspNetCore.Authorization;
+using PortfolioTracker.Core.DTOs.Auth;
 
 namespace PortfolioTracker.API.Controllers;
 

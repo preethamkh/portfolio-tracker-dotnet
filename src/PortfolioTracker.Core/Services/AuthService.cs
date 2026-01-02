@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using PortfolioTracker.Core.DTOs.Auth;
 using PortfolioTracker.Core.DTOs.Authentication;
 using PortfolioTracker.Core.Entities;
 using PortfolioTracker.Core.Interfaces.Repositories;

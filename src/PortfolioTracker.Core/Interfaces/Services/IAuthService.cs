@@ -1,4 +1,5 @@
-﻿using PortfolioTracker.Core.DTOs.Authentication;
+﻿using PortfolioTracker.Core.DTOs.Auth;
+using PortfolioTracker.Core.DTOs.Authentication;
 
 namespace PortfolioTracker.Core.Interfaces.Services;
 
