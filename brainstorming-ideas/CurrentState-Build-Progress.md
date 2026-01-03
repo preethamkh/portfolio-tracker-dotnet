@@ -12,7 +12,7 @@
 
   - **User & Portfolio CRUD** operations are completed and functional.
   - **Authentication (JWT)** is fully implemented and operational.
-  - 54 tests have been written to ensure functionality.
+  - 71 tests have been written to ensure functionality.
 
 - **Database**:
 
