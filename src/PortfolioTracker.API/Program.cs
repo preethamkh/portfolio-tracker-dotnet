@@ -209,6 +209,14 @@ builder.Services.AddStackExchangeRedisCache(options =>
 // 1. Configure Alpha Vantage settings from appsettings.json
 builder.Services.Configure<AlphaVantageSettings>(builder.Configuration.GetSection("AlphaVantage"));
 
+// todo: This is for the TestController (remove if I decide to delete)
+builder.Services.AddHttpClient<AlphaVantageService, AlphaVantageService>(client => {
+    client.Timeout = TimeSpan.FromSeconds(30);
+    client.DefaultRequestHeaders.Add("User-Agent", "PortfolioTracker/1.0");
+}).AddTransientHttpErrorPolicy(policy =>
+    policy.WaitAndRetryAsync(3, retryAttempt =>
+        TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
+
 // 2. Register HttpClient for AlphaVantageService
 // WHY AddHttpClient instead of new HttpClient()?
 // - Prevents socket exhaustion (reuses HttpClient instances)
