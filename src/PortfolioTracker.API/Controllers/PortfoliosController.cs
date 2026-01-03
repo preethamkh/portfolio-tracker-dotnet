@@ -123,11 +123,6 @@ public class PortfoliosController(
             return Forbid();
         }
 
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
         try
         {
             var portfolio = await portfolioService.CreatePortfolioAsync(userId, createPortfolioDto);
@@ -168,11 +163,6 @@ public class PortfoliosController(
             logger.LogWarning("User {AuthUserId} attempted to update portfolio {PortfolioId} for user {RequestedUserId}",
                 User.GetAuthenticatedUserId(), portfolioId, userId);
             return Forbid();
-        }
-
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
         }
 
         try

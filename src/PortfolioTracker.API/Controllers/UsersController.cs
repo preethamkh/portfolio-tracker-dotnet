@@ -104,13 +104,7 @@ public class UsersController : ControllerBase
     public async Task<ActionResult<UserDto>> CreateUser([FromBody] CreateUserDto createUserDto)
     {
         _logger.LogInformation("POST /api/users - Creating user: {Email}", createUserDto.Email);
-
-        // Model validation happens automatically via [Required], [EmailAddress] attributes
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
-        }
-
+        
         try
         {
             var user = await _userService.CreateUserAsync(createUserDto);
@@ -150,11 +144,6 @@ public class UsersController : ControllerBase
             _logger.LogWarning("User {GetAuthenticatedUserId} attempted to update user {UserId}", User.GetAuthenticatedUserId(), userId);
 
             return Forbid();
-        }
-
-        if (!ModelState.IsValid)
-        {
-            return BadRequest(ModelState);
         }
 
         try
