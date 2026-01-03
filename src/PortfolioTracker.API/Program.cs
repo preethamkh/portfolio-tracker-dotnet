@@ -1,4 +1,3 @@
-using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -7,6 +6,8 @@ using PortfolioTracker.Core.Interfaces.Repositories;
 using PortfolioTracker.Core.Interfaces.Services;
 using PortfolioTracker.Core.Services;
 using PortfolioTracker.Infrastructure.Repositories;
+using PortfolioTracker.Infrastructure.Services;
+using System.Text;
 using ApplicationDbContext = PortfolioTracker.Infrastructure.Data.ApplicationDbContext;
 using DateTime = System.DateTime;
 using Exception = System.Exception;
@@ -178,6 +179,79 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Stock Data Service Configuration
+// 1. Configure Alpha Vantage settings from appsettings.json
+builder.Services.Configure<AlphaVantageSettings>(builder.Configuration.GetSection("AlphaVantage"));
+
+// 2. Register HttpClient for AlphaVantageService
+// 2. Register HttpClient for AlphaVantageService
+// WHY AddHttpClient instead of new HttpClient()?
+// - Prevents socket exhaustion (reuses HttpClient instances)
+// - Adds resilience (can add Polly retry policies)
+// - Easier to mock in tests
+// - Configures default settings centrally
+builder.Services.AddHttpClient<IStockDataService, AlphaVantageService>(client =>
+{
+    // Set reasonable timeout for API calls
+    client.Timeout = TimeSpan.FromSeconds(30);
+
+    // Alpha Vantage recommends User-Agent header
+    client.DefaultRequestHeaders.Add("User-Agent", "PortfolioTracker/1.0");
+});
+// Optional: Add retry policy using Polly (install Microsoft.Extensions.Http.Polly)
+// .AddTransientHttpErrorPolicy(policy => 
+//     policy.WaitAndRetryAsync(3, retryAttempt => 
+//         TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
+
+// IMPORTANT: When we add Redis caching(later), we'll wrap this registration
+// The pattern will be:
+// AlphaVantageService (makes API calls) 
+//   -> wrapped by -> 
+// StockDataCachingService (adds caching)
+//   -> registered as -> 
+// IStockDataService (what controllers use)
+
+
+// EXPLANATION OF THE DI REGISTRATION
+
+// What happens when something requests IStockDataService?
+// 
+// 1. ASP.NET DI container sees: "IStockDataService is needed"
+// 2. Looks up registration: IStockDataService -> AlphaVantageService
+// 3. Creates AlphaVantageService instance with:
+//    - HttpClient (from AddHttpClient - pooled and configured)
+//    - IOptions<AlphaVantageSettings> (from Configure() - bound to appsettings)
+//    - ILogger<AlphaVantageService> (from AddLogging - already registered)
+// 4. Returns the instance
+// 
+// Lifetime: Transient (new instance per request)
+// - HttpClient is pooled underneath, so this is efficient
+// - Each request gets a fresh service instance
+// - No shared state between requests (thread-safe)
+
+
+// FUTURE: SWITCHING PROVIDERS
+
+
+// When you want to switch from Alpha Vantage to Finnhub:
+// 
+// Option 1: Simple switch (replace registration)
+// builder.Services.AddHttpClient<IStockDataService, FinnhubService>(...);
+// 
+// Option 2: Configuration-based switching
+// var provider = builder.Configuration["StockDataProvider:ActiveProvider"];
+// if (provider == "AlphaVantage")
+//     builder.Services.AddHttpClient<IStockDataService, AlphaVantageService>(...);
+// else if (provider == "Finnhub")
+//     builder.Services.AddHttpClient<IStockDataService, FinnhubService>(...);
+// 
+// Option 3: Factory pattern (advanced - use both providers)
+// builder.Services.AddHttpClient<AlphaVantageService>(...);
+// builder.Services.AddHttpClient<FinnhubService>(...);
+// builder.Services.AddSingleton<IStockDataServiceFactory, StockDataServiceFactory>();
+// 
+// Your business logic (SecurityService, etc.) never changes - only this registration!
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -234,6 +308,4 @@ app.MapGet("/health", async (ApplicationDbContext dbContext) =>
 
 app.Run();
 
-public partial class Program
-{
-}
+public partial class Program;

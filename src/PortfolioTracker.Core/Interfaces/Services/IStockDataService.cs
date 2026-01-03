@@ -52,5 +52,5 @@ public interface IStockDataService
     /// This can be expensive (large data), so consider caching heavily.
     /// Some APIs charge per call for historical data.
     /// </remarks>
-    Task<List<HistoricalPriceDto?>> GetHistoricalPricesAsync(string symbol, DateTime startDate, DateTime endDate);
+    Task<List<HistoricalPriceDto>?> GetHistoricalPricesAsync(string symbol, DateTime startDate, DateTime endDate);
 }
