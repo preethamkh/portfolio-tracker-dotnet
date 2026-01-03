@@ -10,6 +10,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### UsersController : ControllerBase
 
+**Namespace:** PortfolioTracker.API.Controllers
+
 **Methods:**
 
 - `Task<ActionResult<IEnumerable<UserDto>>> GetUsers()`
@@ -19,6 +21,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 - `Task<IActionResult> DeleteUser(Guid userId)`
 
 #### PortfoliosController : ControllerBase
+
+**Namespace:** PortfolioTracker.API.Controllers
 
 **Methods:**
 
@@ -32,6 +36,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### AuthController : ControllerBase
 
+**Namespace:** PortfolioTracker.API.Controllers
+
 **Methods:**
 
 - `Task<ActionResult<AuthResponse>> Register(RegisterRequest request)`
@@ -41,6 +47,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 ### Extensions
 
 #### AuthExtensions (static)
+
+**Namespace:** PortfolioTracker.API.Extensions
 
 **Methods:**
 
@@ -60,6 +68,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### User
 
+**Namespace:** PortfolioTracker.Core.Entities
+
 - `Guid Id`
 - `string Email`
 - `string PasswordHash`
@@ -70,6 +80,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 - `ICollection<Portfolio> Portfolios`
 
 #### Portfolio
+
+**Namespace:** PortfolioTracker.Core.Entities
 
 - `Guid Id`
 - `Guid UserId`
@@ -85,6 +97,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### Holding
 
+**Namespace:** PortfolioTracker.Core.Entities
+
 - `Guid Id`
 - `Guid PortfolioId`
 - `Guid SecurityId`
@@ -98,6 +112,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 - `ICollection<Dividend> Dividends`
 
 #### Security
+
+**Namespace:** PortfolioTracker.Core.Entities
 
 - `Guid Id`
 - `string Symbol`
@@ -114,6 +130,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### Transaction
 
+**Namespace:** PortfolioTracker.Core.Entities
+
 - `Guid Id`
 - `Guid HoldingId`
 - `string TransactionType`
@@ -127,6 +145,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 - `Holding Holding`
 
 #### PriceHistory
+
+**Namespace:** PortfolioTracker.Core.Entities
 
 - `Guid Id`
 - `Guid SecurityId`
@@ -142,6 +162,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### Dividend
 
+**Namespace:** PortfolioTracker.Core.Entities
+
 - `Guid Id`
 - `Guid HoldingId`
 - `decimal AmountPerShare`
@@ -152,6 +174,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 - `Holding Holding`
 
 #### PortfolioSnapshot
+
+**Namespace:** PortfolioTracker.Core.Entities
 
 - `Guid Id`
 - `Guid PortfolioId`
@@ -164,6 +188,22 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 ### DTOs
 
+**Namespaces:**
+PortfolioTracker.Core.DTOs.User.UserDto
+PortfolioTracker.Core.DTOs.User.CreateUserDto
+PortfolioTracker.Core.DTOs.User.UpdateUserDto
+PortfolioTracker.Core.DTOs.Portfolio.PortfolioDto
+PortfolioTracker.Core.DTOs.Portfolio.CreatePortfolioDto
+PortfolioTracker.Core.DTOs.Portfolio.UpdatePortfolioDto
+PortfolioTracker.Core.DTOs.Security.SecurityDto
+PortfolioTracker.Core.DTOs.Security.CreateSecurityDto
+PortfolioTracker.Core.DTOs.Security.UpdateSecurityDto
+PortfolioTracker.Core.DTOs.Common.SecuritySearchDto
+PortfolioTracker.Core.DTOs.Auth.AuthResponse
+PortfolioTracker.Core.DTOs.Auth.RegisterRequest
+PortfolioTracker.Core.DTOs.Auth.LoginRequest
+PortfolioTracker.Core.DTOs.Auth.UserInfo
+
 - `UserDto`, `CreateUserDto`, `UpdateUserDto`, `PortfolioDto`, `CreatePortfolioDto`, `UpdatePortfolioDto`
 - `SecurityDto`, `CreateSecurityDto`, `UpdateSecurityDto`, `SecuritySearchDto`
 - `AuthResponse`, `RegisterRequest`, `LoginRequest`, `UserInfo`
@@ -171,6 +211,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 ### Interfaces
 
 #### IUserService
+
+**Namespace:** PortfolioTracker.Core.Interfaces.Services
 
 **Methods:**
 
@@ -184,6 +226,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### IPortfolioService
 
+**Namespace:** PortfolioTracker.Core.Interfaces.Services
+
 **Methods:**
 
 - `Task<IEnumerable<PortfolioDto>> GetUserPortfoliosAsync(Guid userId)`
@@ -196,12 +240,16 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### IJwtTokenService
 
+**Namespace:** PortfolioTracker.Core.Interfaces.Services
+
 **Methods:**
 
 - `string GenerateToken(User user)`
 - `ClaimsPrincipal? ValidateToken(string token)`
 
 #### IAuthService
+
+**Namespace:** PortfolioTracker.Core.Interfaces.Services
 
 **Methods:**
 
@@ -210,12 +258,16 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### IUserRepository : IRepository<User>
 
+**Namespace:** PortfolioTracker.Core.Interfaces.Repositories
+
 **Methods:**
 
 - `Task<User?> GetByEmailAsync(string email)`
 - `Task<bool> IsEmailTakenAsync(string email, Guid? excludeUserId = null)`
 
 #### IPortfolioRepository : IRepository<Portfolio>
+
+**Namespace:** PortfolioTracker.Core.Interfaces.Repositories
 
 **Methods:**
 
@@ -228,6 +280,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### ISecurityRepository : IRepository<Security>
 
+**Namespace:** PortfolioTracker.Core.Interfaces.Repositories
+
 **Methods:**
 
 - `Task<Security?> GetBySymbolAsync(string symbol)`
@@ -235,6 +289,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 - `Task<bool> ExistsBySymbolAsync(string symbol)`
 
 #### IRepository<T>
+
+**Namespace:** PortfolioTracker.Core.Interfaces.Repositories
 
 **Methods:**
 
@@ -254,20 +310,28 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 ### UserService : IUserService
 
+**Namespace:** PortfolioTracker.Core.Services
+
 - Implements all `IUserService` methods
 - Private fields: `_userRepository`, `_logger`
 
 ### PortfolioService : IPortfolioService
+
+**Namespace:** PortfolioTracker.Core.Services
 
 - Implements all `IPortfolioService` methods
 - Private fields: `_portfolioRepository`, `_userRepository`, `_logger`
 
 ### JwtTokenService : IJwtTokenService
 
+**Namespace:** PortfolioTracker.Core.Services
+
 - Implements: `GenerateToken(User)`, `ValidateToken(string)`
 - Private: `_jwtSettings`
 
 ### AuthService : IAuthService
+
+**Namespace:** PortfolioTracker.Core.Services
 
 - Implements: `RegisterAsync(RegisterRequest)`, `LoginAsync(LoginRequest)`
 
@@ -276,6 +340,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 ## PortfolioTracker.Infrastructure
 
 ### ApplicationDbContext : DbContext
+
+**Namespace:** PortfolioTracker.Infrastructure.Data
 
 **Properties:**
 
@@ -298,18 +364,26 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### Repository<T> : IRepository<T>
 
+**Namespace:** PortfolioTracker.Infrastructure.Repositories
+
 - Implements all `IRepository<T>` methods
 - Protected: `Context`, `DbSet`
 
 #### UserRepository : Repository<User>, IUserRepository
 
+**Namespace:** PortfolioTracker.Infrastructure.Repositories
+
 - Implements `IUserRepository` methods
 
 #### PortfolioRepository : Repository<Portfolio>, IPortfolioRepository
 
+**Namespace:** PortfolioTracker.Infrastructure.Repositories
+
 - Implements `IPortfolioRepository` methods
 
 #### SecurityRepository : Repository<Security>, ISecurityRepository
+
+**Namespace:** PortfolioTracker.Infrastructure.Repositories
 
 - Implements `ISecurityRepository` methods
 
@@ -318,6 +392,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 ## PortfolioTracker.UnitTests
 
 ### TestBase (abstract)
+
+**Namespace:** PortfolioTracker.UnitTests
 
 **Methods:**
 
@@ -328,10 +404,14 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### UserServiceTests : TestBase
 
+**Namespace:** PortfolioTracker.UnitTests.Services
+
 - Fields: `_mockUserRepository`, `_userService`
 - Methods: All test methods for user service (e.g., `GetAllUsersAsync_WhenUsersExist_ShouldReturnAllUsers()`, etc.)
 
 #### PortfolioServiceTests : TestBase
+
+**Namespace:** PortfolioTracker.UnitTests.Services
 
 - Fields: `_mockPortfolioRepository`, `_mockUserRepository`, `_portfolioService`
 - Methods: All test methods for portfolio service
@@ -340,6 +420,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### AuthExtensionsTests
 
+**Namespace:** PortfolioTracker.UnitTests.Extensions
+
 - Methods: All test methods for `AuthExtensions`
 
 ---
@@ -347,6 +429,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 ## PortfolioTracker.IntegrationTests
 
 ### IntegrationTestBase (abstract)
+
+**Namespace:** PortfolioTracker.IntegrationTests
 
 **Fields:**
 
@@ -361,6 +445,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### TestDataBuilder (static)
 
+**Namespace:** PortfolioTracker.IntegrationTests.Helpers
+
 **Methods:**
 
 - `CreateUser(...)`, `CreateUsers(...)`, `CreatePortfolio(...)`
@@ -368,9 +454,13 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### TestEntityExtensions (static)
 
+**Namespace:** PortfolioTracker.IntegrationTests.Helpers
+
 - Fluent builder methods for test entities
 
 #### HttpClientExtensions (static)
+
+**Namespace:** PortfolioTracker.IntegrationTests.Helpers
 
 **Methods:**
 
@@ -379,6 +469,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 #### HttpResponseExtensions (static)
 
+**Namespace:** PortfolioTracker.IntegrationTests.Helpers
+
 **Methods:**
 
 - `IsSuccessful(...)`, `GetStatusCodeAsInt(...)`
@@ -386,6 +478,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 ### Fixtures
 
 #### PostgresIntegrationTestFactory : WebApplicationFactory<Program>, IAsyncLifetime
+
+**Namespace:** PortfolioTracker.IntegrationTests.Fixtures
 
 **Fields:**
 
@@ -396,6 +490,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 - `InitializeAsync()`, `ConfigureWebHost(IWebHostBuilder)`, `DisposeAsync()`
 
 #### IntegrationTestWebAppFactory : WebApplicationFactory<Program>
+
+**Namespace:** PortfolioTracker.IntegrationTests.Fixtures
 
 **Fields:**
 
@@ -410,6 +506,8 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 ## API
 
 ### UsersControllerTests, PortfoliosControllerTests, AuthControllerTests
+
+**Namespace:** PortfolioTracker.IntegrationTests.API
 
 - Methods: All test methods for API endpoints
 
