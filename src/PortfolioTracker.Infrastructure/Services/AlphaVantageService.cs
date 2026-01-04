@@ -29,12 +29,30 @@ public class AlphaVantageService(
             var root = await response.ReadAsJsonAsync<JsonElement>();
 
             // Check for rate limit or error
+            // Alpha Vantage API sometimes returns a JSON object with a "Note" property when we exceed the allowed number of API calls (rate limiting)
+            // Or - an "Error Message" property if the request is invalid or the symbol is not found.
             if (root.TryGetProperty("Note", out _) || root.TryGetProperty("Error Message", out _))
             {
                 _logger.LogWarning("Alpha Vantage API limit or error for symbol {Symbol}", symbol);
                 return null;
             }
 
+            // Alpha Vantage API returns a JSON object with a "Global Quote" property containing quote data.
+            // example:
+            //{
+            //    "Global Quote": {
+            //        "01. symbol": "AAPL",
+            //        "02. open": "272.2550",
+            //        "03. high": "277.8400",
+            //        "04. low": "269.0000",
+            //        "05. price": "271.0100",
+            //        "06. volume": "37838054",
+            //        "07. latest trading day": "2026-01-02",
+            //        "08. previous close": "271.8600",
+            //        "09. change": "-0.8500",
+            //        "10. change percent": "-0.3127%"
+            //    }
+            //}
             if (!root.TryGetProperty("Global Quote", out var quote))
             {
                 _logger.LogWarning("No quote data found for symbol {Symbol}", symbol);
@@ -84,7 +102,7 @@ public class AlphaVantageService(
                 Sector = GetJsonProperty(root, "Sector"),
                 Industry = GetJsonProperty(root, "Industry"),
                 Description = GetJsonProperty(root, "Description"),
-                Currency = GetJsonProperty(root, "Currency") ?? "USD",
+                Currency = GetJsonProperty(root, "Currency"),
                 Country = GetJsonProperty(root, "Country")
             };
         }
@@ -104,6 +122,44 @@ public class AlphaVantageService(
 
             var root = await response.ReadAsJsonAsync<JsonElement>();
 
+            // sample
+            //{
+            //    "bestMatches": [
+            //    {
+            //        "1. symbol": "TSCO.LON",
+            //        "2. name": "Tesco PLC",
+            //        "3. type": "Equity",
+            //        "4. region": "United Kingdom",
+            //        "5. marketOpen": "08:00",
+            //        "6. marketClose": "16:30",
+            //        "7. timezone": "UTC+01",
+            //        "8. currency": "GBX",
+            //        "9. matchScore": "0.7273"
+            //    },
+            //    {
+            //        "1. symbol": "TSCDF",
+            //        "2. name": "Tesco plc",
+            //        "3. type": "Equity",
+            //        "4. region": "United States",
+            //        "5. marketOpen": "09:30",
+            //        "6. marketClose": "16:00",
+            //        "7. timezone": "UTC-04",
+            //        "8. currency": "USD",
+            //        "9. matchScore": "0.7143"
+            //    },
+            //    {
+            //        "1. symbol": "TCO0.FRK",
+            //        "2. name": "TESCO PLC LS-0633333",
+            //        "3. type": "Equity",
+            //        "4. region": "Frankfurt",
+            //        "5. marketOpen": "08:00",
+            //        "6. marketClose": "20:00",
+            //        "7. timezone": "UTC+02",
+            //        "8. currency": "EUR",
+            //        "9. matchScore": "0.5455"
+            //    }
+            //    ]
+            //}
             if (!root.TryGetProperty("bestMatches", out var matches))
             {
                 return new List<ExternalSecuritySearchDto>();
@@ -118,7 +174,7 @@ public class AlphaVantageService(
                     Name = GetJsonProperty(match, "2. name"),
                     Type = GetJsonProperty(match, "3. type"),
                     Region = GetJsonProperty(match, "4. region"),
-                    Currency = GetJsonProperty(match, "8. currency") ?? "AUD"
+                    Currency = GetJsonProperty(match, "8. currency")
                 });
             }
 

@@ -32,4 +32,15 @@ The `PortfolioTracker.Infrastructure` project provides the data access and persi
 
 ---
 
-This project is designed for maintainability, scalability, and clear separation between infrastructure and domain logic.
+## Notes
+External API (Alpha Vantage)
+    returns raw JSON
+StockQuoteDto (ExternalData DTO  = these shape API responses. Only Exteranl DTOs change if we change API providers) <- Normalizes API response
+    consumed by
+SecurityService
+    maps to
+Security Entity (your domain model)
+    exposed as
+SecurityDto (your domain DTO = shape our business logic)
+    returned to
+Controller -> Client

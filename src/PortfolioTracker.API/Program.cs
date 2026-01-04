@@ -194,6 +194,7 @@ builder.Services.Configure<StockDataCacheSettings>(
     builder.Configuration.GetSection("StockDataCache"));
 
 // Add Redis distributed cache (IDistributedCache implementation)
+// (bonus - switch to different cache providers easily in future)
 var redisSettings = builder.Configuration.GetSection("Redis").Get<RedisSettings>();
 builder.Services.AddStackExchangeRedisCache(options =>
 {
@@ -244,7 +245,9 @@ builder.Services.AddHttpClient<IStockDataService, AlphaVantageService>(client =>
 //   -> registered as -> 
 // IStockDataService (what controllers use)
 
-
+// 3. Register StockDataCachingService as a decorator around AlphaVantageService
+// NOTE: this overrides the previous IStockDataService registration and DECORATES it (registers a factory that wraps AlphaVantageService)
+// Last registration wins in DI container
 builder.Services.AddScoped<IStockDataService>(serviceProvider =>
 {
     // Resolve the inner AlphaVantageService

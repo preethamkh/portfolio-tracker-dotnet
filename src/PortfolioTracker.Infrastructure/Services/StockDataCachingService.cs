@@ -9,7 +9,7 @@ using PortfolioTracker.Infrastructure.Configuration;
 namespace PortfolioTracker.Infrastructure.Services;
 
 /// <summary>
-/// Decorator that adds Redis caching to any IStockDataService implementation.
+/// Decorator that adds Redis caching(or swap later in program.cs) to any IStockDataService implementation.
 /// Implements the Decorator Pattern to wrap another IStockDataService.
 /// </summary>
 /// <remarks>
@@ -28,7 +28,7 @@ namespace PortfolioTracker.Infrastructure.Services;
 /// Why this pattern?
 /// - AlphaVantageService doesn't know it's being cached
 /// - Can wrap ANY IStockDataService implementation
-/// - Easy to add/remove caching by changing DI registration
+/// - Easy to add/remove caching by changing DI registration (redis, sql, in-memory)
 /// - Single Responsibility: Caching is separate from API calls
 /// </remarks>
 public class StockDataCachingService : IStockDataService
