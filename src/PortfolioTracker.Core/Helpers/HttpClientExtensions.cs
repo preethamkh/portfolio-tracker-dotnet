@@ -1,7 +1,7 @@
 ﻿using System.Net.Http.Json;
 using System.Text.Json;
 
-namespace PortfolioTracker.IntegrationTests.Helpers;
+namespace PortfolioTracker.Core.Helpers;
 
 /// <summary>
 /// Extension methods for HttpClient to simplify test requests.

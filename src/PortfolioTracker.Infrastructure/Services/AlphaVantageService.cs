@@ -4,6 +4,7 @@ using PortfolioTracker.Core.Configuration;
 using PortfolioTracker.Core.DTOs.ExternalData;
 using PortfolioTracker.Core.Interfaces.Services;
 using System.Text.Json;
+using PortfolioTracker.Core.Helpers;
 
 namespace PortfolioTracker.Infrastructure.Services;
 
@@ -23,10 +24,9 @@ public class AlphaVantageService(
         try
         {
             var url = $"{_baseUrl}?function=GLOBAL_QUOTE&symbol={symbol}&apikey={_apiKey}";
-            var response = await _httpClient.GetStringAsync(url);
+            var response = await _httpClient.GetAsync(url);
 
-            using var doc = JsonDocument.Parse(response);
-            var root = doc.RootElement;
+            var root = await response.ReadAsJsonAsync<JsonElement>();
 
             // Check for rate limit or error
             if (root.TryGetProperty("Note", out _) || root.TryGetProperty("Error Message", out _))
@@ -66,10 +66,9 @@ public class AlphaVantageService(
         try
         {
             var url = $"{_baseUrl}?function=OVERVIEW&symbol={symbol}&apikey={_apiKey}";
-            var response = await _httpClient.GetStringAsync(url);
+            var response = await _httpClient.GetAsync(url);
 
-            using var doc = JsonDocument.Parse(response);
-            var root = doc.RootElement;
+            var root = await response.ReadAsJsonAsync<JsonElement>();
 
             if (root.TryGetProperty("Note", out _) || !root.TryGetProperty("Symbol", out _))
             {
@@ -101,10 +100,9 @@ public class AlphaVantageService(
         try
         {
             var url = $"{_baseUrl}?function=SYMBOL_SEARCH&keywords={query}&apikey={_apiKey}";
-            var response = await _httpClient.GetStringAsync(url);
+            var response = await _httpClient.GetAsync(url);
 
-            using var doc = JsonDocument.Parse(response);
-            var root = doc.RootElement;
+            var root = await response.ReadAsJsonAsync<JsonElement>();
 
             if (!root.TryGetProperty("bestMatches", out var matches))
             {
@@ -140,10 +138,9 @@ public class AlphaVantageService(
         {
             // Alpha Vantage returns full history, we filter after
             var url = $"{_baseUrl}?function=TIME_SERIES_DAILY&symbol={symbol}&outputsize=full&apikey={_apiKey}";
-            var response = await _httpClient.GetStringAsync(url);
 
-            using var doc = JsonDocument.Parse(response);
-            var root = doc.RootElement;
+            var response = await _httpClient.GetAsync(url);
+            var root = await response.ReadAsJsonAsync<JsonElement>();
 
             if (!root.TryGetProperty("Time Series (Daily)", out var timeSeries))
             {

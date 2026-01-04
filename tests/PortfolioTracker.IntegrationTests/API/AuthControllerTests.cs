@@ -5,6 +5,7 @@ using PortfolioTracker.IntegrationTests.Fixtures;
 using PortfolioTracker.IntegrationTests.Helpers;
 using System.Net;
 using System.Net.Http.Headers;
+using PortfolioTracker.Core.Helpers;
 
 namespace PortfolioTracker.IntegrationTests.API;
 

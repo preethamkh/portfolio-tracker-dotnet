@@ -2,6 +2,7 @@
 using FluentAssertions;
 using Microsoft.EntityFrameworkCore;
 using PortfolioTracker.Core.DTOs.User;
+using PortfolioTracker.Core.Helpers;
 using PortfolioTracker.IntegrationTests.Fixtures;
 using PortfolioTracker.IntegrationTests.Helpers;
 
