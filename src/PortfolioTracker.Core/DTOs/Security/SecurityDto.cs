@@ -31,6 +31,7 @@ public class SecurityDto
     /// <summary>
     /// Trading currency (USD, AUD, etc.)
     /// </summary>
+    // todo: might have to switch to USD since the APIs mostly support USD
     public string Currency { get; set; } = "AUD";
 
     /// <summary>
