@@ -117,7 +117,3 @@
 4. Begin **Frontend Development** using **React**, **TypeScript**, **Vite**, and **Tailwind CSS**.
 
 ---
-
-This updated roadmap and decision-making should give you a solid foundation for continuing with your **Portfolio Tracker** app. It gives you flexibility with the stock data provider (Alpha Vantage or others) while optimizing API calls through caching and async processing with RabbitMQ.
-
----
