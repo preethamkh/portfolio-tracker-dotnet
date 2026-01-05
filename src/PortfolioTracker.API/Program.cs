@@ -111,12 +111,14 @@ builder.Services.AddAuthorization();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPortfolioRepository, PortfolioRepository>();
+builder.Services.AddScoped<IHoldingRepository, HoldingRepository>();
 
 // Register Services (Business Logic Layer)
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IPortfolioService, PortfolioService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
+builder.Services.AddScoped<IHoldingService, HoldingService>();
 
 builder.Services.AddControllers();
 
@@ -237,15 +239,6 @@ builder.Services.AddHttpClient<IStockDataService, AlphaVantageService>(client =>
      policy.WaitAndRetryAsync(3, retryAttempt =>
          TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
-// IMPORTANT: When we add Redis caching(later), we'll wrap this registration
-// The pattern will be:
-// AlphaVantageService (makes API calls) 
-//   -> wrapped by -> 
-// StockDataCachingService (adds caching)
-//   -> registered as -> 
-// IStockDataService (what controllers use)
-
-// 3. Register StockDataCachingService as a decorator around AlphaVantageService
 // NOTE: this overrides the previous IStockDataService registration and DECORATES it (registers a factory that wraps AlphaVantageService)
 // Last registration wins in DI container
 builder.Services.AddScoped<IStockDataService>(serviceProvider =>

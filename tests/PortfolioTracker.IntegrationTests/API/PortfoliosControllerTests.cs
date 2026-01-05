@@ -4,6 +4,7 @@ using PortfolioTracker.Core.DTOs.Portfolio;
 using PortfolioTracker.IntegrationTests.Fixtures;
 using PortfolioTracker.IntegrationTests.Helpers;
 using System.Net;
+using PortfolioTracker.Core.Helpers;
 
 namespace PortfolioTracker.IntegrationTests.API;
 

@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Folder Include="DTOs\Holding\" />
     <Folder Include="DTOs\Common\" />
     <Folder Include="DTOs\Transaction\" />
   </ItemGroup>
