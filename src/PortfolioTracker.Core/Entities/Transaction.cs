@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using PortfolioTracker.Core.Enums;
 
 namespace PortfolioTracker.Core.Entities;
 
@@ -27,7 +28,7 @@ public class Transaction
     /// </summary>
     [Required]
     [MaxLength(10)]
-    public string TransactionType { get; set; } = string.Empty;
+    public TransactionType TransactionType { get; set; }
 
     /// <summary>
     /// Number of shares bought or sold.

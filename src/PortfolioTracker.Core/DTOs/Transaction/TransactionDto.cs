@@ -1,4 +1,6 @@
-﻿namespace PortfolioTracker.Core.DTOs.Transaction;
+﻿using PortfolioTracker.Core.Enums;
+
+namespace PortfolioTracker.Core.DTOs.Transaction;
 
 /// <summary>
 /// Transaction details for display.
@@ -12,9 +14,7 @@ public class TransactionDto
     // Security info (denormalized for convenience)
     public string Symbol { get; set; } = string.Empty;
     public string SecurityName { get; set; } = string.Empty;
-
-    // todo: enum?
-    public string TransactionType { get; set; } = string.Empty; // "Buy" or "Sell"
+    public TransactionType TransactionType { get; set; }
     public decimal Shares { get; set; }
     public decimal PricePerShare { get; set; }
     public decimal TotalAmount { get; set; }

@@ -1,4 +1,6 @@
-﻿namespace PortfolioTracker.Core.DTOs.Transaction;
+﻿using PortfolioTracker.Core.Enums;
+
+namespace PortfolioTracker.Core.DTOs.Transaction;
 
 /// <summary>
 /// Create a new transaction (buy or sell).
@@ -7,7 +9,7 @@
 public class CreateTransactionDto
 {
     public Guid HoldingId { get; set; }
-    public string TransactionType { get; set; } = string.Empty;
+    public TransactionType TransactionType { get; set; }
     public decimal Shares { get; set; }
     public decimal PricePerShare { get; set; }
     public decimal Fees { get; set; } = 0;

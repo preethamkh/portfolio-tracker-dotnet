@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
 using PortfolioTracker.Core.DTOs.Transaction;
 using PortfolioTracker.Core.Entities;
+using PortfolioTracker.Core.Enums;
 using PortfolioTracker.Core.Interfaces.Repositories;
 
 namespace PortfolioTracker.Core.Services;
@@ -79,10 +80,9 @@ public class TransactionService : ITransactionService
     public async Task<TransactionDto> CreateTransactionAsync(Guid userId, CreateTransactionDto createTransactionDto)
     {
         // Validate transaction type
-        // todo: switch to enum
-        if (createTransactionDto.TransactionType != "Buy" && createTransactionDto.TransactionType != "Sell")
+        if (createTransactionDto.TransactionType != TransactionType.Buy && createTransactionDto.TransactionType != TransactionType.Sell)
         {
-            throw new InvalidOperationException("Transaction type must be 'Buy' or 'Sell'");
+            throw new InvalidOperationException("Transaction type must be Buy or Sell.");
         }
 
         // Get holding and verify user owns it
@@ -99,7 +99,7 @@ public class TransactionService : ITransactionService
         }
 
         // Validate sell transaction
-        if (createTransactionDto.TransactionType == "Sell" && createTransactionDto.Shares > holding.TotalShares)
+        if (createTransactionDto.TransactionType == TransactionType.Sell && createTransactionDto.Shares > holding.TotalShares)
         {
             throw new InvalidOperationException($"Cannot sell {createTransactionDto.Shares} shares. Only {holding.TotalShares} shares available.");
         }
@@ -220,12 +220,12 @@ public class TransactionService : ITransactionService
     /// </summary>
     private async Task UpdateHoldingFromTransactionAsync(
         Holding holding,
-        string transactionType,
+        TransactionType transactionType,
         decimal shares,
         decimal pricePerShare,
         decimal fees)
     {
-        if (transactionType == "Buy")
+        if (transactionType == TransactionType.Buy)
         {
             // Calculate new average cost using weighted average
             var currentValue = holding.TotalShares * (holding.AverageCost ?? 0);
@@ -237,7 +237,7 @@ public class TransactionService : ITransactionService
                 ? (currentValue + newValue) / newTotalShares
                 : 0;
         }
-        else if (transactionType == "Sell")
+        else if (transactionType == TransactionType.Sell)
         {
             holding.TotalShares -= shares;
             // Average cost remains the same on sell
@@ -258,12 +258,12 @@ public class TransactionService : ITransactionService
     /// </summary>
     private async Task ReverseTransactionEffectAsync(
         Holding holding,
-        string transactionType,
+        TransactionType transactionType,
         decimal shares,
         decimal pricePerShare,
         decimal fees)
     {
-        if (transactionType == "Buy")
+        if (transactionType == TransactionType.Buy)
         {
             // Reverse buy: remove shares and recalculate average cost
             var currentValue = holding.TotalShares * (holding.AverageCost ?? 0);
@@ -275,7 +275,7 @@ public class TransactionService : ITransactionService
                 ? (currentValue - removedValue) / newTotalShares
                 : null;
         }
-        else if (transactionType == "Sell")
+        else if (transactionType == TransactionType.Sell)
         {
             // Reverse sell: add shares back
             holding.TotalShares += shares;
