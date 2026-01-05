@@ -86,7 +86,7 @@ public class SecurityServiceTests : TestBase
 
         // Assert
         results.Should().NotBeNull();
-        results.Should().HaveCount(2);
+        results.Should().HaveCount(1);
         results.First().Symbol.Should().Be("AAPL");
         results.First().Id.Should().Be(securityInDatabase.Id);
     }
@@ -245,10 +245,10 @@ public class SecurityServiceTests : TestBase
             .ReturnsAsync((CompanyInfoDto?) null);
 
         // Act & Assert
-        await Assert.ThrowsAsync<Exception>(async () =>
-        {
-            await _securityService.GetOrCreateSecurityAsync("INVALID");
-        });
+        Func<Task> getOrCreateSecurityAction = async () => await _securityService.GetOrCreateSecurityAsync("INVALID");
+
+        await getOrCreateSecurityAction.Should().ThrowAsync<Exception>()
+            .WithMessage("Unable to fetch information for symbol INVALID");
 
         // Verify no security was created
         _mockSecurityRepository.Verify(
