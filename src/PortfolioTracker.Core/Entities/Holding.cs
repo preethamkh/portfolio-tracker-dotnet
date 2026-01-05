@@ -60,5 +60,6 @@ public class Holding
     /// <summary>
     /// Dividend payments received for this holding
     /// </summary>
+    // todo: Implement dividend tracking and taxation logic later
     public virtual ICollection<Dividend> Dividends { get; set; } = new List<Dividend>();
 }
