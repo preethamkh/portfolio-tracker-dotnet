@@ -117,7 +117,7 @@ public class SecuritiesController(ISecurityService securityService, ILogger<Secu
             var security = await securityService.GetOrCreateSecurityAsync(request.Symbol);
             return CreatedAtAction(
                 nameof(GetSecurityById),
-                new { id = security.Id },
+                new { securityId = security.Id },
                 security);
         }
         catch (InvalidOperationException ex)

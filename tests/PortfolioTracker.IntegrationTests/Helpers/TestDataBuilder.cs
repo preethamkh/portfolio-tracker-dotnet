@@ -160,7 +160,7 @@ public static class TestDataBuilder
     public static async Task<Security> CreateSecurity(ApplicationDbContext context, string? symbol = null,
         string? name = null, string securityType = "STOCK", string currency = "AUD", string exchange = "NYSE")
     {
-        var security = new Security()
+        var security = new Security
         {
             Name = name ?? "Test Security",
             Symbol = symbol ?? $"TEST{Guid.NewGuid():N}".Substring(0, 8).ToUpper(),
