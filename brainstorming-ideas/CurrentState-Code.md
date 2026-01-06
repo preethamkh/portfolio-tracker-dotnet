@@ -8,6 +8,53 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 
 ### Controllers
 
+#### HoldingsController : ControllerBase
+
+**Namespace:** PortfolioTracker.API.Controllers
+
+**Methods:**
+
+- `Task<ActionResult<IEnumerable<HoldingDto>>> GetPortfolioHoldings(Guid portfolioId)`
+- `Task<ActionResult<HoldingDto>> GetHolding(Guid portfolioId, Guid holdingId)`
+- `Task<ActionResult<HoldingDto>> CreateHolding(Guid portfolioId, CreateHoldingDto createHoldingDto)`
+- `Task<ActionResult<HoldingDto>> UpdateHolding(Guid portfolioId, Guid holdingId, UpdateHoldingDto updateHoldingDto)`
+- `Task<IActionResult> DeleteHolding(Guid portfolioId, Guid holdingId)`
+
+#### TransactionsController : ControllerBase
+
+**Namespace:** PortfolioTracker.API.Controllers
+
+**Methods:**
+
+- `Task<ActionResult<IEnumerable<TransactionDto>>> GetHoldingTransactions(Guid holdingId)`
+- `Task<ActionResult<IEnumerable<TransactionDto>>> GetPortfolioTransactions(Guid portfolioId)`
+- `Task<ActionResult<TransactionDto>> GetTransaction(Guid transactionId)`
+- `Task<ActionResult<TransactionDto>> CreateTransaction(Guid portfolioId, CreateTransactionDto createTransactionDto)`
+- `Task<ActionResult<TransactionDto>> UpdateTransaction(Guid transactionId, UpdateTransactionDto updateTransactionDto)`
+- `Task<IActionResult> DeleteTransaction(Guid transactionId)`
+
+#### SecuritiesController : ControllerBase
+
+**Namespace:** PortfolioTracker.API.Controllers
+
+**Methods:**
+
+- `Task<ActionResult<List<SecurityDto>>> SearchSecurities(string query, int limit = 10)`
+- `Task<ActionResult<SecurityDto>> GetSecurity(Guid id)`
+- `Task<ActionResult<SecurityDto>> GetSecurityBySymbol(string symbol)`
+- `Task<ActionResult<SecurityDto>> GetOrCreateSecurity(GetOrCreateSecurityRequest request)`
+- `Task<ActionResult<SecurityDto>> CreateSecurity(CreateSecurityDto createSecurityDto)`
+- `Task<ActionResult<SecurityDto>> UpdateSecurity(Guid id, UpdateSecurityDto updateSecurityDto)`
+- `Task<IActionResult> DeleteSecurity(Guid id)`
+
+#### TestController : ControllerBase
+
+**Namespace:** PortfolioTracker.API.Controllers
+
+**Methods:**
+
+- `Task<IActionResult> TestStockData(string symbol)`
+
 #### UsersController : ControllerBase
 
 **Namespace:** PortfolioTracker.API.Controllers
@@ -189,24 +236,32 @@ Configures DI, JWT, EF Core, logging, error handling, and environment-specific s
 ### DTOs
 
 **Namespaces:**
-PortfolioTracker.Core.DTOs.User.UserDto
-PortfolioTracker.Core.DTOs.User.CreateUserDto
-PortfolioTracker.Core.DTOs.User.UpdateUserDto
-PortfolioTracker.Core.DTOs.Portfolio.PortfolioDto
-PortfolioTracker.Core.DTOs.Portfolio.CreatePortfolioDto
-PortfolioTracker.Core.DTOs.Portfolio.UpdatePortfolioDto
-PortfolioTracker.Core.DTOs.Security.SecurityDto
-PortfolioTracker.Core.DTOs.Security.CreateSecurityDto
-PortfolioTracker.Core.DTOs.Security.UpdateSecurityDto
-PortfolioTracker.Core.DTOs.Common.SecuritySearchDto
-PortfolioTracker.Core.DTOs.Auth.AuthResponse
-PortfolioTracker.Core.DTOs.Auth.RegisterRequest
-PortfolioTracker.Core.DTOs.Auth.LoginRequest
-PortfolioTracker.Core.DTOs.Auth.UserInfo
 
-- `UserDto`, `CreateUserDto`, `UpdateUserDto`, `PortfolioDto`, `CreatePortfolioDto`, `UpdatePortfolioDto`
-- `SecurityDto`, `CreateSecurityDto`, `UpdateSecurityDto`, `SecuritySearchDto`
-- `AuthResponse`, `RegisterRequest`, `LoginRequest`, `UserInfo`
+- PortfolioTracker.Core.DTOs.User.UserDto
+- PortfolioTracker.Core.DTOs.User.CreateUserDto
+- PortfolioTracker.Core.DTOs.User.UpdateUserDto
+- PortfolioTracker.Core.DTOs.Portfolio.PortfolioDto
+- PortfolioTracker.Core.DTOs.Portfolio.CreatePortfolioDto
+- PortfolioTracker.Core.DTOs.Portfolio.UpdatePortfolioDto
+- PortfolioTracker.Core.DTOs.Security.SecurityDto
+- PortfolioTracker.Core.DTOs.Security.CreateSecurityDto
+- PortfolioTracker.Core.DTOs.Security.UpdateSecurityDto
+- PortfolioTracker.Core.DTOs.Security.SecuritySearchDto
+- PortfolioTracker.Core.DTOs.Holding.HoldingDto
+- PortfolioTracker.Core.DTOs.Holding.CreateHoldingDto
+- PortfolioTracker.Core.DTOs.Holding.UpdateHoldingDto
+- PortfolioTracker.Core.DTOs.Holding.HoldingSummaryDto
+- PortfolioTracker.Core.DTOs.Transaction.TransactionDto
+- PortfolioTracker.Core.DTOs.Transaction.CreateTransactionDto
+- PortfolioTracker.Core.DTOs.Transaction.UpdateTransactionDto
+- PortfolioTracker.Core.DTOs.ExternalData.ExternalSecuritySearchDto
+- PortfolioTracker.Core.DTOs.ExternalData.CompanyInfoDto
+- PortfolioTracker.Core.DTOs.ExternalData.StockQuoteDto
+- PortfolioTracker.Core.DTOs.ExternalData.HistoricalPriceDto
+- PortfolioTracker.Core.DTOs.Auth.AuthResponse
+- PortfolioTracker.Core.DTOs.Auth.RegisterRequest
+- PortfolioTracker.Core.DTOs.Auth.LoginRequest
+- PortfolioTracker.Core.DTOs.Auth.UserInfo
 
 ### Interfaces
 
@@ -306,34 +361,55 @@ PortfolioTracker.Core.DTOs.Auth.UserInfo
 
 ---
 
-## Services
+### Services
 
-### UserService : IUserService
+#### UserService : IUserService
 
 **Namespace:** PortfolioTracker.Core.Services
 
 - Implements all `IUserService` methods
 - Private fields: `_userRepository`, `_logger`
 
-### PortfolioService : IPortfolioService
+#### PortfolioService : IPortfolioService
 
 **Namespace:** PortfolioTracker.Core.Services
 
 - Implements all `IPortfolioService` methods
 - Private fields: `_portfolioRepository`, `_userRepository`, `_logger`
 
-### JwtTokenService : IJwtTokenService
+#### JwtTokenService : IJwtTokenService
 
 **Namespace:** PortfolioTracker.Core.Services
 
 - Implements: `GenerateToken(User)`, `ValidateToken(string)`
 - Private: `_jwtSettings`
 
-### AuthService : IAuthService
+#### AuthService : IAuthService
 
 **Namespace:** PortfolioTracker.Core.Services
 
 - Implements: `RegisterAsync(RegisterRequest)`, `LoginAsync(LoginRequest)`
+
+#### HoldingService : IHoldingService
+
+**Namespace:** PortfolioTracker.Core.Services
+
+- Implements all `IHoldingService` methods
+- Private fields: `_holdingRepository`, `_portfolioRepository`, `_securityRepository`, `_stockDataService`, `_logger`
+
+#### TransactionService : ITransactionService
+
+**Namespace:** PortfolioTracker.Core.Services
+
+- Implements all `ITransactionService` methods
+- Private fields: `_transactionRepository`, `_holdingRepository`, `_portfolioRepository`, `_logger`
+
+#### SecurityService : ISecurityService
+
+**Namespace:** PortfolioTracker.Core.Services
+
+- Implements all `ISecurityService` methods
+- Private fields: `_securityRepository`, `_stockDataService`, `_logger`
 
 ---
 
@@ -386,6 +462,18 @@ PortfolioTracker.Core.DTOs.Auth.UserInfo
 **Namespace:** PortfolioTracker.Infrastructure.Repositories
 
 - Implements `ISecurityRepository` methods
+
+#### HoldingRepository : Repository<Holding>, IHoldingRepository
+
+**Namespace:** PortfolioTracker.Infrastructure.Repositories
+
+- Implements `IHoldingRepository` methods
+
+#### TransactionRepository : Repository<Transaction>, ITransactionRepository
+
+**Namespace:** PortfolioTracker.Infrastructure.Repositories
+
+- Implements `ITransactionRepository` methods
 
 ---
 
@@ -443,24 +531,212 @@ PortfolioTracker.Core.DTOs.Auth.UserInfo
 
 ### Helpers
 
+### DTOs
+
+**Namespaces:**
+PortfolioTracker.Core.DTOs.Holding.HoldingDto
+PortfolioTracker.Core.DTOs.Holding.CreateHoldingDto
+PortfolioTracker.Core.DTOs.Holding.UpdateHoldingDto
+PortfolioTracker.Core.DTOs.Holding.HoldingSummaryDto
+PortfolioTracker.Core.DTOs.Transaction.TransactionDto
+PortfolioTracker.Core.DTOs.Transaction.CreateTransactionDto
+PortfolioTracker.Core.DTOs.Transaction.UpdateTransactionDto
+PortfolioTracker.Core.DTOs.ExternalData.ExternalSecuritySearchDto
+PortfolioTracker.Core.DTOs.ExternalData.CompanyInfoDto
+PortfolioTracker.Core.DTOs.ExternalData.StockQuoteDto
+PortfolioTracker.Core.DTOs.ExternalData.HistoricalPriceDto
+
 #### TestDataBuilder (static)
 
-**Namespace:** PortfolioTracker.IntegrationTests.Helpers
+### Enums
 
-**Methods:**
+#### TransactionType
 
-- `CreateUser(...)`, `CreateUsers(...)`, `CreatePortfolio(...)`
-- `CreatePortfolios(...)`, `CreateSecurity(...)`, `CreateUserWithPortfolios(...)`, `ClearDatabase(...)`
+**Namespace:** PortfolioTracker.Core.Enums
 
-#### TestEntityExtensions (static)
-
-**Namespace:** PortfolioTracker.IntegrationTests.Helpers
-
-- Fluent builder methods for test entities
+### Helpers
 
 #### HttpClientExtensions (static)
 
+**Namespace:** PortfolioTracker.Core.Helpers
+**Methods:**
+
+- `PostAsJsonAsync<T>(...)`
+- `PutAsJsonAsync<T>(...)`
+- `ReadAsJsonAsync<T>(...)`
+- `ReadAsSuccessfulJsonAsync<T>(...)`
+- `ReadAsStringAsync(...)`
+- `BuildUrl(...)`
+
+### Interfaces
+
 **Namespace:** PortfolioTracker.IntegrationTests.Helpers
+
+#### IHoldingService
+
+**Namespace:** PortfolioTracker.Core.Interfaces.Services
+**Methods:**
+
+- `Task<IEnumerable<HoldingDto>> GetPortfolioHoldingsAsync(Guid portfolioId, Guid userId)`
+- `Task<HoldingDto?> GetHoldingByIdAsync(Guid holdingId, Guid portfolioId, Guid userId)`
+- `Task<HoldingDto?> CreateHoldingAsync(Guid portfolioId, Guid userId, CreateHoldingDto createHoldingDto)`
+- `Task<HoldingDto?> UpdateHoldingAsync(Guid holdingId, Guid portfolioId, Guid userId, UpdateHoldingDto updateHoldingDto)`
+- `Task<bool> DeleteHoldingAsync(Guid holdingId, Guid portfolioId, Guid userId)`
+
+#### ISecurityService
+
+**Namespace:** PortfolioTracker.Core.Interfaces.Services
+**Methods:**
+
+- `Task<List<SecurityDto>> SearchSecuritiesAsync(string query, int limit = 10)`
+- `Task<SecurityDto?> GetSecurityByIdAsync(Guid id)`
+- `Task<SecurityDto?> GetSecurityBySymbolAsync(string symbol)`
+- `Task<SecurityDto> GetOrCreateSecurityAsync(string symbol)`
+
+#### IStockDataService
+
+**Namespace:** PortfolioTracker.Core.Interfaces.Services
+**Methods:**
+
+- `Task<StockQuoteDto?> GetQuoteAsync(string symbol)`
+- `Task<CompanyInfoDto?> GetCompanyInfoAsync(string symbol)`
+- `Task<List<ExternalSecuritySearchDto>> SearchSecuritiesAsync(string query, int limit = 10)`
+- `Task<List<HistoricalPriceDto>?> GetHistoricalPricesAsync(string symbol, DateTime startDate, DateTime endDate)`
+
+#### ITransactionService
+
+**Namespace:** PortfolioTracker.Core.Interfaces.Services
+**Methods:**
+
+- `Task<IEnumerable<TransactionDto>> GetHoldingTransactionsAsync(Guid holdingId, Guid userId)`
+- `Task<IEnumerable<TransactionDto>> GetPortfolioTransactionsAsync(Guid portfolioId, Guid userId)`
+- `Task<TransactionDto?> GetTransactionByIdAsync(Guid transactionId, Guid userId)`
+- `Task<TransactionDto> CreateTransactionAsync(Guid userId, CreateTransactionDto createTransactionDto)`
+- `Task<TransactionDto?> UpdateTransactionAsync(Guid transactionId, Guid userId, UpdateTransactionDto updateTransactionDto)`
+- `Task<bool> DeleteTransactionAsync(Guid transactionId, Guid userId)`
+
+#### IHoldingRepository : IRepository<Holding>
+
+**Namespace:** PortfolioTracker.Core.Interfaces.Repositories
+**Methods:**
+
+- `Task<IEnumerable<Holding>> GetByPortfolioIdAsync(Guid portfolioId)`
+- `Task<Holding?> GetByIdWithDetailsAsync(Guid holdingId)`
+- `Task<Holding?> GetByPortfolioAndSecurityAsync(Guid portfolioId, Guid securityId)`
+- `Task<bool> ExistsInPortfolioAsync(Guid holdingId, Guid portfolioId)`
+- `Task<IEnumerable<Holding>> GetWithTransactionsAsync(Guid portfolioId)`
+
+#### ITransactionRepository : IRepository<Transaction>
+
+**Namespace:** PortfolioTracker.Core.Interfaces.Repositories
+**Methods:**
+
+- `Task<IEnumerable<Transaction>> GetByHoldingIdAsync(Guid holdingId)`
+- `Task<Transaction?> GetByIdWithDetailsAsync(Guid transactionId)`
+- `Task<IEnumerable<Transaction>> GetByPortfolioIdAsync(Guid portfolioId)`
+- `Task<bool> ExistsInHoldingAsync(Guid transactionId, Guid holdingId)`
+
+**Methods:**
+
+### HoldingService : IHoldingService
+
+**Namespace:** PortfolioTracker.Core.Services
+Implements all `IHoldingService` methods
+Private fields: `_holdingRepository`, `_portfolioRepository`, `_securityRepository`, `_stockDataService`, `_logger`
+
+### TransactionService : ITransactionService
+
+**Namespace:** PortfolioTracker.Core.Services
+Implements all `ITransactionService` methods
+Private fields: `_transactionRepository`, `_holdingRepository`, `_portfolioRepository`, `_logger`
+
+### SecurityService : ISecurityService
+
+**Namespace:** PortfolioTracker.Core.Services
+Implements all `ISecurityService` methods
+Private fields: `_securityRepository`, `_stockDataService`, `_logger`
+
+- `CreateUser(...)`, `CreateUsers(...)`, `CreatePortfolio(...)`
+
+### ApplicationDbContext : DbContext
+
+#### HoldingRepository : Repository<Holding>, IHoldingRepository
+
+**Namespace:** PortfolioTracker.Infrastructure.Repositories
+Implements `IHoldingRepository` methods
+
+#### TransactionRepository : Repository<Transaction>, ITransactionRepository
+
+**Namespace:** PortfolioTracker.Infrastructure.Repositories
+Implements `ITransactionRepository` methods
+
+### Services
+
+#### StockDataCachingService : IStockDataService
+
+**Namespace:** PortfolioTracker.Infrastructure.Services
+
+- Implements all `IStockDataService` methods, wraps another IStockDataService for caching
+- Private fields: `_innerService`, `_cache`, `_logger`, `_cacheSettings`
+
+#### AlphaVantageService : IStockDataService
+
+**Namespace:** PortfolioTracker.Infrastructure.Services
+
+- Implements all `IStockDataService` methods for Alpha Vantage API
+- Private fields: `_httpClient`, `_logger`, `_apiKey`, `_baseUrl`
+
+### Configuration
+
+#### StockDataCacheSettings
+
+**Namespace:** PortfolioTracker.Infrastructure.Configuration
+
+- Properties: `QuoteCacheDurationMinutes`, `CompanyInfoCacheDurationDays`, `HistoricalDataCacheDurationDays`
+
+#### RedisSettings
+
+**Namespace:** PortfolioTracker.Infrastructure.Configuration
+
+- Properties: `ConnectionString`, `InstanceName`
+
+#### AlphaVantageSettings
+
+**Namespace:** PortfolioTracker.Infrastructure.Configuration
+
+- Properties: `ApiKey`, `BaseUrl`, `TimeoutInSeconds`, `EnableCaching`, `SecurityInfoCacheMinutes`, `PriceCacheMinutes`
+
+### HoldingsController : ControllerBase
+
+**Namespace:** PortfolioTracker.API.Controllers
+**Methods:**
+
+- `Task<ActionResult<IEnumerable<HoldingDto>>> GetPortfolioHoldings(Guid portfolioId)`
+- `Task<ActionResult<HoldingDto>> GetHolding(Guid portfolioId, Guid holdingId)`
+- `Task<ActionResult<HoldingDto>> CreateHolding(Guid portfolioId, CreateHoldingDto createHoldingDto)`
+- `Task<ActionResult<HoldingDto>> UpdateHolding(Guid portfolioId, Guid holdingId, UpdateHoldingDto updateHoldingDto)`
+- `Task<IActionResult> DeleteHolding(Guid portfolioId, Guid holdingId)`
+
+### TransactionsController : ControllerBase
+
+**Namespace:** PortfolioTracker.API.Controllers
+**Methods:**
+
+- `Task<ActionResult<IEnumerable<TransactionDto>>> GetHoldingTransactions(Guid holdingId)`
+- `Task<ActionResult<IEnumerable<TransactionDto>>> GetPortfolioTransactions(Guid portfolioId)`
+- `Task<ActionResult<TransactionDto>> GetTransaction(Guid transactionId)`
+- `Task<ActionResult<TransactionDto>> CreateTransaction(Guid portfolioId, CreateTransactionDto createTransactionDto)`
+- `Task<ActionResult<TransactionDto>> UpdateTransaction(Guid transactionId, UpdateTransactionDto updateTransactionDto)`
+- `Task<IActionResult> DeleteTransaction(Guid transactionId)`
+
+### TestController : ControllerBase
+
+**Namespace:** PortfolioTracker.API.Controllers
+**Methods:**
+
+- `Task<IActionResult> TestStockData(string symbol)`
+
+### UsersControllerTests, PortfoliosControllerTests, AuthControllerTests, HoldingsControllerTests, TransactionsControllerTests
 
 **Methods:**
 
