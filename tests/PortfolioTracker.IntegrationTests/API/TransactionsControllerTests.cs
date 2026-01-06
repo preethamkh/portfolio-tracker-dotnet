@@ -18,7 +18,6 @@ public class TransactionsControllerTests(IntegrationTestWebAppFactory factory) :
     public async Task GetPortfolioTransactions_WithoutAuthentication_ShouldReturn401()
     {
         // Arrange
-        ClearAuthentication();
         var userId = Guid.NewGuid();
         var portfolioId = Guid.NewGuid();
 
