@@ -3,7 +3,6 @@ using PortfolioTracker.Core.DTOs.Auth;
 using PortfolioTracker.Core.Helpers;
 using PortfolioTracker.Infrastructure.Data;
 using PortfolioTracker.IntegrationTests.Fixtures;
-using PortfolioTracker.IntegrationTests.Helpers;
 
 namespace PortfolioTracker.IntegrationTests;
 
@@ -88,6 +87,8 @@ public abstract class IntegrationTestBase : IClassFixture<IntegrationTestWebAppF
     private void CleanDatabase()
     {
         // Remove all data (order matters due to foreign keys)
+        Context.Transactions.RemoveRange(Context.Transactions);
+        Context.Holdings.RemoveRange(Context.Holdings);
         Context.Portfolios.RemoveRange(Context.Portfolios);
         Context.Users.RemoveRange(Context.Users);
         // todo: Currently have this in TestDataBuilder
