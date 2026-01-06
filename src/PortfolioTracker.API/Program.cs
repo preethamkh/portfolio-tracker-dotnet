@@ -113,6 +113,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPortfolioRepository, PortfolioRepository>();
 builder.Services.AddScoped<ISecurityRepository, SecurityRepository>();
 builder.Services.AddScoped<IHoldingRepository, HoldingRepository>();
+builder.Services.AddScoped<ITransactionRepository, TransactionRepository>();
 
 // Register Services (Business Logic Layer)
 builder.Services.AddScoped<IUserService, UserService>();
@@ -121,6 +122,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IJwtTokenService, JwtTokenService>();
 builder.Services.AddScoped<ISecurityService, SecurityService>();
 builder.Services.AddScoped<IHoldingService, HoldingService>();
+builder.Services.AddScoped<ITransactionService, TransactionService>();
 
 builder.Services.AddControllers();
 
