@@ -4,58 +4,37 @@ You are allowed to view the code but \*\*cannot redistribute\*\*, \*\*modify\*\*
 
 # Portfolio Management Application for Tracking Stocks, ETFs, and Investment Performance
 
-## Project Overview:
+## Project Overview
 
 - **Track multiple investment portfolios**
-- **Record buy transactions**
-- **Sell transactions** (later)
+- **Record buy/sell transactions**
 - **Monitor real-time stock prices**
-- **Calculate profile/loss and returns**
 - **Visualize portfolio performance over time**
 - **Analyze asset allocation and sector distribution**
 
-## Architecture:
+## Architecture
 
-### System Design:
-
-#### Pattern:
+### System Design
 
 - **Modular Monolith** (evolvable to microservices)
+- **RESTful API** with JWT authentication
+- **Frontend**: Shared React + TypeScript + Vite + Tailwind CSS (SPA), designed to work with multiple backend stacks
+- **Backend**: ASP.NET Core 8 Web API (this repo)
+- **Database**: PostgreSQL (schema designed for reuse across stacks)
+- **Caching**: Redis
+- **Message Queue**: RabbitMQ (planned for later)
+- **Containerization**: Docker
 
-#### API:
+### Multi-Stack Vision
 
-- RESTful with JWT authentication
+This project is part of a broader architecture supporting three backend stacks:
+- **.NET 8 (this repo)**
+- **MERN/JS (Node.js + NestJS + MongoDB/Prisma)**
+- **PHP (Laravel 11 + PostgreSQL)**
 
-#### Frontend:
+The React frontend and PostgreSQL schema are shared, enabling rapid development and consistent user experience across all stacks. Backend switching is supported via environment variables.
 
-- React + TypeScript (SPA)
-
-#### Backend:
-
-- ASP.NET Core 8 Web API
-
-#### Database:
-
-- PostgreSQL
-
-#### Caching:
-
-- Redis
-- For Production, use managed Redis services
-  Azure: Azure Cache for Redis
-  AWS: Amazon ElastiCache (Redis)
-  Railway: Railway Redis add-on
-  Redis Cloud: redis.com (free tier available)
-
-#### Message Queue:
-
-- RabbitMQ
-
-#### Containerization:
-
-- Docker
-
-### Design Principles:
+### Design Principles
 
 - **Clean Architecture**: Separation of concerns with distinct layers
 - **SOLID Principles**: Maintainable and extensible code
@@ -64,7 +43,23 @@ You are allowed to view the code but \*\*cannot redistribute\*\*, \*\*modify\*\*
 - **Security First**: Authentication, authorization, input validation
 - **Test-Driven**: Comprehensive test coverage
 
-## Prerequisites:
+## Prerequisites
+
+- **.NET 8 SDK**
+- **Node.js 20 LTS**
+- **PostgreSQL 16**
+- **Redis**
+- **Docker Desktop**
+- **Git**
+
+## See Also
+
+- [MERN/JS Backend (planned)](https://github.com/preethamkh/porfolio-tracker-mern)
+- [Laravel/PHP Backend (planned)](https://github.com/preethamkh/porfolio-tracker-laravel)
+- [Shared React Frontend (planned)]()
+
+The .NET 8 stack is the reference implementation for business logic, API contracts, and database schema.
+
 
 ### Development Environment:
 
