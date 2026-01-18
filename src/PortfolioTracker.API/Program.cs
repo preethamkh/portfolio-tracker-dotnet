@@ -180,7 +180,7 @@ builder.Services.AddCors(options =>
                 "http://localhost:3000",
                 "https://portfoliotracker-react.vercel.app",
                 // Allow all Vercel preview deployments
-                "https://*.vercel.app")
+                //"https://*.vercel.app")
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials();
