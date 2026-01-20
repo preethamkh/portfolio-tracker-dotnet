@@ -9,7 +9,7 @@ namespace PortfolioTracker.API.Data;
 /// Seed data script for development/testing.
 /// Creates a test user with portfolio, securities, holdings, and transactions.
 /// </summary>
-public class SeedDataScript
+public static class SeedDataScript
 {
     public static async Task SeedTestDataAsync(ApplicationDbContext context)
     {

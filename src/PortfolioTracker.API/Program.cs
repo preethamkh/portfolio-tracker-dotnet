@@ -1,15 +1,16 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Polly;
+using PortfolioTracker.API.Data;
 using PortfolioTracker.Core.Configuration;
 using PortfolioTracker.Core.Interfaces.Repositories;
 using PortfolioTracker.Core.Interfaces.Services;
 using PortfolioTracker.Core.Services;
+using PortfolioTracker.Infrastructure.Configuration;
 using PortfolioTracker.Infrastructure.Repositories;
 using PortfolioTracker.Infrastructure.Services;
 using System.Text;
-using Polly;
-using PortfolioTracker.Infrastructure.Configuration;
 using ApplicationDbContext = PortfolioTracker.Infrastructure.Data.ApplicationDbContext;
 using DateTime = System.DateTime;
 using Exception = System.Exception;
@@ -358,6 +359,33 @@ app.MapGet("/health", async (ApplicationDbContext dbContext) =>
             );
     }
 });
+
+// =============================================================================
+// SEED DATA (Development Only)
+// =============================================================================
+
+if (app.Environment.IsDevelopment())
+{
+    using var scope = app.Services.CreateScope();
+
+    var services = scope.ServiceProvider;
+
+    try
+    {
+        var context = services.GetRequiredService<ApplicationDbContext>();
+
+        // Ensure database is created
+        await context.Database.EnsureCreatedAsync();
+
+        // Run seed data
+        await SeedDataScript.SeedTestDataAsync(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred while seeding the database.");
+    }
+}
 
 app.Run();
 
