@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
+using PortfolioTracker.Core.Interfaces.Services;
 using PortfolioTracker.Infrastructure.Data;
+using PortfolioTracker.IntegrationTests.Helpers;
 
 namespace PortfolioTracker.IntegrationTests.Fixtures;
 
@@ -54,7 +56,7 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>
         // Call the base method to ensure default configuration
         base.ConfigureWebHost(builder);
 
-        builder.ConfigureAppConfiguration((context, config) =>
+        builder.ConfigureAppConfiguration((_, config) =>
         {
             config.AddJsonFile("appsettings.Testing.json", optional: false, reloadOnChange: true);
         });
@@ -89,6 +91,18 @@ public class IntegrationTestWebAppFactory : WebApplicationFactory<Program>
                 // - Good enough for most tests
                 // - For critical tests, we'll use Testcontainers with real PostgreSQL
             });
+
+            // Remove the real IStockDataService registration
+            var descriptors = services.Where(d => d.ServiceType == typeof(IStockDataService)).ToList();
+            foreach (var d in descriptors)
+                services.Remove(d);
+            //var stockDataServiceDescriptor = services.SingleOrDefault(d => d.ServiceType == typeof(IStockDataService));
+            //if (stockDataServiceDescriptor != null)
+            //{
+            //    services.Remove(stockDataServiceDescriptor);
+            //}
+            // Register a mock/fake IStockDataService for testing
+            services.AddSingleton<IStockDataService, MockStockDataService>();
 
             // Step 3: Ensure the database is created for each test
             var serviceProvider = services.BuildServiceProvider();
