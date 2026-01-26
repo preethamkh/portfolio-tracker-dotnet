@@ -88,7 +88,7 @@ public class TransactionServiceTests : TestBase
             });
 
         // Act
-        var result = await _transactionService.CreateTransactionAsync(userId, createDto);
+        var result = await _transactionService.CreateTransactionAsync(userId, portfolioId, createDto);
 
         // Assert
         result.Should().NotBeNull();
@@ -146,7 +146,7 @@ public class TransactionServiceTests : TestBase
             .ReturnsAsync(new Transaction { Holding = holding });
 
         // Act
-        await _transactionService.CreateTransactionAsync(userId, createDto);
+        await _transactionService.CreateTransactionAsync(userId, holding.PortfolioId, createDto);
 
         // Assert
         // Average cost = (10 × $180 + $5) / 10 = $180.50
@@ -202,7 +202,7 @@ public class TransactionServiceTests : TestBase
             .ReturnsAsync(new Transaction { Holding = holding });
 
         // Act
-        await _transactionService.CreateTransactionAsync(userId, createDto);
+        await _transactionService.CreateTransactionAsync(userId, holding.PortfolioId, createDto);
 
         // Assert
         // Shares reduced to 7, but average cost stays at $180
@@ -254,7 +254,7 @@ public class TransactionServiceTests : TestBase
             .ReturnsAsync(new Transaction { Holding = holding });
 
         // Act
-        await _transactionService.CreateTransactionAsync(userId, createDto);
+        await _transactionService.CreateTransactionAsync(userId, holding.PortfolioId, createDto);
 
         // Assert
         // All shares sold, average cost should be null
@@ -298,7 +298,7 @@ public class TransactionServiceTests : TestBase
 
         // Act & Assert
         Func<Task> createTransactionAsyncAction = async () =>
-            await _transactionService.CreateTransactionAsync(userId, createDto);
+            await _transactionService.CreateTransactionAsync(userId, holding.PortfolioId, createDto);
 
         await createTransactionAsyncAction.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("*Cannot sell*");
@@ -322,7 +322,7 @@ public class TransactionServiceTests : TestBase
 
         // Act & Assert
         Func<Task> createTransactionAsyncAction = async () =>
-            await _transactionService.CreateTransactionAsync(Guid.NewGuid(), createDto);
+            await _transactionService.CreateTransactionAsync(Guid.NewGuid(), Guid.NewGuid(), createDto);
 
         await createTransactionAsyncAction.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("Transaction type must be Buy or Sell.");
@@ -346,7 +346,7 @@ public class TransactionServiceTests : TestBase
 
         // Act & Assert
         Func<Task> createTransactionAsyncAction = async () =>
-            await _transactionService.CreateTransactionAsync(Guid.NewGuid(), createDto);
+            await _transactionService.CreateTransactionAsync(Guid.NewGuid(), Guid.NewGuid(), createDto);
 
         await createTransactionAsyncAction.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage($"Holding {createDto.HoldingId} not found");
@@ -382,7 +382,7 @@ public class TransactionServiceTests : TestBase
 
         // Act & Assert
         Func<Task> createTransactionAsyncAction = async () =>
-            await _transactionService.CreateTransactionAsync(userId, createDto);
+            await _transactionService.CreateTransactionAsync(userId, holding.PortfolioId, createDto);
 
         await createTransactionAsyncAction.Should().ThrowAsync<InvalidOperationException>()
             .WithMessage("User does not have access to this portfolio");
