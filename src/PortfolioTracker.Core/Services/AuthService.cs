@@ -9,7 +9,7 @@ namespace PortfolioTracker.Core.Services;
 /// <summary>
 /// Service for handling user authentication (registration and login).
 /// </summary>
-public class AuthService(IUserRepository userRepository, IJwtTokenService jwtTokenService, ILogger<AuthService> logger)
+public class AuthService(IUserRepository userRepository, IJwtTokenService jwtTokenService, ILogger<AuthService> logger, IPortfolioRepository portfolioRepository)
     : IAuthService
 {
     /// <summary>
@@ -53,6 +53,19 @@ public class AuthService(IUserRepository userRepository, IJwtTokenService jwtTok
         // Step 4: Save to database
         await userRepository.AddAsync(user);
         await userRepository.SaveChangesAsync();
+
+        // Auto-create default portfolio for new user
+        var defaultPortfolio = new Portfolio
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Name = "My Portfolio",
+            Currency = "USD",
+            IsDefault = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
+        };
+        await portfolioRepository.AddAsync(defaultPortfolio);
 
         logger.LogInformation("User registered successfully: {UserId} ({Email})", user.Id, user.Email);
 
