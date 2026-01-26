@@ -35,11 +35,7 @@ public class HoldingsController(IHoldingService holdingService, ILogger<Holdings
 
         var holdings = await holdingService.GetPortfolioHoldingsAsync(portfolioId, userId);
 
-        if (!holdings.Any())
-        {
-            return NotFound(new { message = "Holdings not found" });
-        }
-
+        // The 404 status should be reserved for when the portfolio itself doesn't exist, not when it has zero holdings. This is the correct RESTful API design.
         return Ok(holdings);
     }
 
