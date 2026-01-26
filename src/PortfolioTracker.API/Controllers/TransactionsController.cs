@@ -98,12 +98,13 @@ public class TransactionsController : ControllerBase
         return Ok(transaction);
     }
 
-    [HttpPost("transactions")]
+    [HttpPost("portfolios/{portfolioId}/transactions")]
     [ProducesResponseType(typeof(TransactionDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<ActionResult<TransactionDto>> CreateTransaction(
         Guid userId,
+        Guid portfolioId,
         [FromBody] CreateTransactionDto createTransactionDto)
     {
         if (!User.IsAuthorizedForUser(userId))
@@ -113,7 +114,7 @@ public class TransactionsController : ControllerBase
 
         try
         {
-            var transaction = await _transactionService.CreateTransactionAsync(userId, createTransactionDto);
+            var transaction = await _transactionService.CreateTransactionAsync(userId, portfolioId, createTransactionDto);
 
             return CreatedAtAction(
                 nameof(GetTransaction),

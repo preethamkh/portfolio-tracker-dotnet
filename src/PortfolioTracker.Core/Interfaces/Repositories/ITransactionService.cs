@@ -27,7 +27,7 @@ public interface ITransactionService
     /// Create a new transaction (buy or sell).
     /// Automatically updates holding's TotalShares and AverageCost.
     /// </summary>
-    Task<TransactionDto> CreateTransactionAsync(Guid userId, CreateTransactionDto createTransactionDto);
+    Task<TransactionDto> CreateTransactionAsync(Guid userId, Guid portfolioId, CreateTransactionDto createTransactionDto);
 
     /// <summary>
     /// Update an existing transaction.

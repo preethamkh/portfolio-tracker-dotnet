@@ -123,7 +123,7 @@ public class TransactionsControllerTests(IntegrationTestWebAppFactory factory) :
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/transactions", createDto);
+        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/portfolios/{portfolio.Id}/transactions", createDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -169,7 +169,7 @@ public class TransactionsControllerTests(IntegrationTestWebAppFactory factory) :
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/transactions", createDto);
+        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/portfolios/{portfolio.Id}/transactions", createDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -209,7 +209,7 @@ public class TransactionsControllerTests(IntegrationTestWebAppFactory factory) :
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/transactions", createDto);
+        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/portfolios/{portfolio.Id}/transactions", createDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -246,7 +246,7 @@ public class TransactionsControllerTests(IntegrationTestWebAppFactory factory) :
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/transactions", createDto);
+        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/portfolios/{portfolio.Id}/transactions", createDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -258,6 +258,7 @@ public class TransactionsControllerTests(IntegrationTestWebAppFactory factory) :
         // Arrange
         var authResponse = await RegisterAndAuthenticateAsync("preetham@test.com", "Password123!");
         var userId = authResponse.User.Id;
+        var portfolio = await TestDataBuilder.CreatePortfolio(Context, userId, "Test Portfolio");
 
         var createDto = new CreateTransactionDto
         {
@@ -270,7 +271,7 @@ public class TransactionsControllerTests(IntegrationTestWebAppFactory factory) :
         };
 
         // Act
-        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/transactions", createDto);
+        var response = await Client.PostAsJsonAsync($"/api/users/{userId}/portfolios/{portfolio.Id}/transactions", createDto);
 
         // Assert
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);

@@ -77,7 +77,7 @@ public class TransactionService : ITransactionService
         return MapToTransactionDto(transaction);
     }
 
-    public async Task<TransactionDto> CreateTransactionAsync(Guid userId, CreateTransactionDto createTransactionDto)
+    public async Task<TransactionDto> CreateTransactionAsync(Guid userId, Guid portfolioId, CreateTransactionDto createTransactionDto)
     {
         // Validate transaction type
         if (createTransactionDto.TransactionType != TransactionType.Buy && createTransactionDto.TransactionType != TransactionType.Sell)
@@ -87,12 +87,12 @@ public class TransactionService : ITransactionService
 
         // Get holding and verify user owns it
         var holding = await _holdingRepository.GetByIdWithDetailsAsync(createTransactionDto.HoldingId);
-        if (holding == null)
+        if (holding == null || holding.PortfolioId != portfolioId)
         {
             throw new InvalidOperationException($"Holding {createTransactionDto.HoldingId} not found");
         }
 
-        var portfolio = await _portfolioRepository.GetByIdAndUserIdAsync(holding.PortfolioId, userId);
+        var portfolio = await _portfolioRepository.GetByIdAndUserIdAsync(portfolioId, userId);
         if (portfolio == null)
         {
             throw new InvalidOperationException("User does not have access to this portfolio");
