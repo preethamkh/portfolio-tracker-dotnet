@@ -225,55 +225,57 @@ builder.Services.AddStackExchangeRedisCache(options =>
 
 
 // ======================================================
-// STOCK DATA SERVICE WITH CACHING (DECORATOR PATTERN)
+// STOCK DATA SERVICE WITH PROVIDER SWITCHING & CACHING (DECORATOR PATTERN)
 // ======================================================
 
-// 1. Configure Alpha Vantage settings from appsettings.json
-builder.Services.Configure<AlphaVantageSettings>(builder.Configuration.GetSection("AlphaVantage"));
+// Get active provider from configuration
+var activeProvider = builder.Configuration["StockDataProvider:ActiveProvider"] ?? "AlphaVantage";
 
-// todo: This is for the TestController (remove if I decide to delete)
-builder.Services.AddHttpClient<AlphaVantageService, AlphaVantageService>(client => {
+// Configure settings for both providers
+builder.Services.Configure<AlphaVantageSettings>(builder.Configuration.GetSection("AlphaVantage"));
+builder.Services.Configure<YahooFinanceSettings>(builder.Configuration.GetSection("YahooFinance"));
+
+// Register HttpClient for AlphaVantageService
+builder.Services.AddHttpClient<AlphaVantageService>(client =>
+{
     client.Timeout = TimeSpan.FromSeconds(30);
     client.DefaultRequestHeaders.Add("User-Agent", "PortfolioTracker/1.0");
 }).AddTransientHttpErrorPolicy(policy =>
     policy.WaitAndRetryAsync(3, retryAttempt =>
         TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
-// 2. Register HttpClient for AlphaVantageService
-// WHY AddHttpClient instead of new HttpClient()?
-// - Prevents socket exhaustion (reuses HttpClient instances)
-// - Adds resilience (can add Polly retry policies)
-// - Easier to mock in tests
-// - Configures default settings centrally
-builder.Services.AddHttpClient<IStockDataService, AlphaVantageService>(client =>
+// Register HttpClient for YahooFinanceService
+builder.Services.AddHttpClient<YahooFinanceService>(client =>
 {
-    // Set reasonable timeout for API calls
     client.Timeout = TimeSpan.FromSeconds(30);
-
-    // Alpha Vantage recommends User-Agent header
     client.DefaultRequestHeaders.Add("User-Agent", "PortfolioTracker/1.0");
-
-    // Optional: Add retry policy using Polly (install Microsoft.Extensions.Http.Polly)
 }).AddTransientHttpErrorPolicy(policy =>
-     policy.WaitAndRetryAsync(3, retryAttempt =>
-         TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
+    policy.WaitAndRetryAsync(3, retryAttempt =>
+        TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))));
 
-// NOTE: this overrides the previous IStockDataService registration and DECORATES it (registers a factory that wraps AlphaVantageService)
-// Last registration wins in DI container
+// Register IStockDataService with provider switching and caching decorator
 builder.Services.AddScoped<IStockDataService>(serviceProvider =>
 {
-    // Resolve the inner AlphaVantageService
-    var alphaVantageService = serviceProvider.GetRequiredService<AlphaVantageService>();
-    // Resolve other dependencies for caching
+    // Select the provider based on configuration
+    IStockDataService innerService = activeProvider.ToLower() switch
+    {
+        "yahoofinance" => serviceProvider.GetRequiredService<YahooFinanceService>(),
+        "alphavantage" => serviceProvider.GetRequiredService<AlphaVantageService>(),
+        _ => serviceProvider.GetRequiredService<AlphaVantageService>() // Default fallback
+    };
+
+    // Wrap the selected provider with caching decorator
     var cache = serviceProvider.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>();
     var logger = serviceProvider.GetRequiredService<ILogger<StockDataCachingService>>();
     var cacheSettings = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<StockDataCacheSettings>>();
-    // Return the caching decorator wrapping the AlphaVantageService
-    return new StockDataCachingService(
-        alphaVantageService,
-        cache,
-        logger,
-        cacheSettings);
+
+    var cachedService = new StockDataCachingService(innerService, cache, logger, cacheSettings);
+    
+    // Log which provider is being used
+    var startupLogger = serviceProvider.GetRequiredService<ILogger<Program>>();
+    startupLogger.LogInformation("Stock Data Provider configured: {Provider}", activeProvider);
+    
+    return cachedService;
 });
 
 

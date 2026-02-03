@@ -7,13 +7,31 @@ using PortfolioTracker.Infrastructure.Configuration;
 using System.Text.Json;
 
 namespace PortfolioTracker.Infrastructure.Services;
-public class YahooFinanceService(
-    HttpClient httpClient,
-    IOptions<YahooFinanceSettings> settings,
-    ILogger<YahooFinanceService> logger)
-    : IStockDataService
+
+/// <summary>
+/// Yahoo Finance API implementation via RapidAPI.
+/// Provides stock quotes, company info, search, and historical data.
+/// </summary>
+public class YahooFinanceService : IStockDataService
 {
-    private readonly YahooFinanceSettings _settings = settings.Value;
+    private readonly HttpClient _httpClient;
+    private readonly YahooFinanceSettings _settings;
+    private readonly ILogger<YahooFinanceService> _logger;
+
+    public YahooFinanceService(
+        HttpClient httpClient,
+        IOptions<YahooFinanceSettings> settings,
+        ILogger<YahooFinanceService> logger)
+    {
+        _httpClient = httpClient;
+        _settings = settings.Value;
+        _logger = logger;
+
+        // Configure RapidAPI headers (required for authentication)
+        _httpClient.DefaultRequestHeaders.Clear();
+        _httpClient.DefaultRequestHeaders.Add("X-RapidAPI-Key", _settings.ApiKey);
+        _httpClient.DefaultRequestHeaders.Add("X-RapidAPI-Host", _settings.RapidApiHost);
+    }
 
     public async Task<StockQuoteDto?> GetQuoteAsync(string symbol)
     {
@@ -21,161 +39,313 @@ public class YahooFinanceService(
         {
             var url = $"{_settings.BaseUrl}/api/stock/get-price?region={_settings.Region}&symbol={symbol}";
 
-            logger.LogInformation("Fetching quote for {Symbol} from Yahoo Finance", symbol);
+            _logger.LogInformation("Fetching quote for {Symbol} from Yahoo Finance", symbol);
 
-            var response = await httpClient.GetAsync(url);
+            var response = await _httpClient.GetAsync(url);
 
             if (!response.IsSuccessStatusCode)
             {
-                logger.LogWarning("Failed to fetch quote for {Symbol}. Status Code: {StatusCode}", symbol, response.StatusCode);
+                _logger.LogWarning("Failed to fetch quote for {Symbol}. Status Code: {StatusCode}", symbol, response.StatusCode);
                 return null;
             }
 
             var root = await response.ReadAsJsonAsync<JsonElement>();
 
-            // Parse Yahoo Finance response (sample response)
-            /*
-             *{
-                 "quoteSummary": {
-                   "result": [
-                     {
-                       "price": {
-                         "regularMarketChange": {
-                           "raw": -0.01999998,
-                           "fmt": "-0.0200"
-                         },
-                         "regularMarketPrice": {
-                           "raw": 4.89,
-                           "fmt": "4.8900"
-                         },
-                         "regularMarketVolume": {
-                           "raw": 19887539,
-                           "fmt": "19.89M",
-                           "longFmt": "19,887,539.00"
-                         },
-                         "exchange": "ASX",
-                         "quoteType": "EQUITY",
-                         "symbol": "TLS.AX",
-                         "shortName": "TELSTRA FPO [TLS]",
-                         "longName": "Telstra Group Limited",
-                         "currency": "AUD",
-                         "currencySymbol": "$",
-                       }
-                     }
-                   ],
-                   "error": null
-                 }
-               }
-             */
-
-            if (!root.TryGetProperty("quoteSummary", out var quoteSummary) || !quoteSummary.TryGetProperty("result", out var results))
+            // Parse Yahoo Finance response
+            if (!root.TryGetProperty("quoteSummary", out var quoteSummary) || 
+                !quoteSummary.TryGetProperty("result", out var results))
             {
-                logger.LogWarning("Unexpected response structure for symbol {Symbol}", symbol);
+                _logger.LogWarning("Unexpected response structure for symbol {Symbol}", symbol);
                 return null;
             }
 
             var result = results.EnumerateArray().FirstOrDefault();
             if (result.ValueKind == JsonValueKind.Undefined)
             {
-                logger.LogWarning("No results found for symbol {Symbol}", symbol);
+                _logger.LogWarning("No results found for symbol {Symbol}", symbol);
                 return null;
             }
 
             if (!result.TryGetProperty("price", out var price))
             {
-                logger.LogWarning("Price data not found for symbol {Symbol}", symbol);
+                _logger.LogWarning("Price data not found for symbol {Symbol}", symbol);
                 return null;
             }
 
             return new StockQuoteDto
             {
-                //Symbol = GetJsonProperty(price, "symbol") ?? symbol,
-                //Price = decimal.Parse(GetJsonProperty(price, "regularMarketPrice")),
-                //Change = decimal.TryParse(GetJsonProperty(quote, "09. change"), out var change)
-                //    ? change : null,
-                //ChangePercent = GetRawDecimalProperty(GetJsonProperty(quote, "10. change percent")),
-                //Volume = long.TryParse(GetJsonProperty(quote, "06. volume"), out var vol)
-                //    ? vol : null,
-                //Timestamp = DateTime.UtcNow,
-                //Currency = "USD"
+                Symbol = GetJsonProperty(price, "symbol") ?? symbol,
+                Price = GetDecimalProperty(price, "regularMarketPrice") ?? 0,
+                Change = GetDecimalProperty(price, "regularMarketChange"),
+                ChangePercent = GetDecimalProperty(price, "regularMarketChangePercent"),
+                Volume = GetLongProperty(price, "regularMarketVolume"),
+                Timestamp = DateTime.UtcNow,
+                Currency = GetJsonProperty(price, "currency") ?? "USD"
             };
         }
-        catch (Exception e)
+        catch (Exception ex)
         {
-            Console.WriteLine(e);
-            throw;
+            _logger.LogError(ex, "Error fetching quote for symbol {Symbol}", symbol);
+            return null;
         }
     }
 
     public async Task<CompanyInfoDto?> GetCompanyInfoAsync(string symbol)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var url = $"{_settings.BaseUrl}/api/stock/get-details?region={_settings.Region}&symbol={symbol}";
+
+            _logger.LogInformation("Fetching company info for {Symbol} from Yahoo Finance", symbol);
+
+            var response = await _httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to fetch company info for {Symbol}. Status Code: {StatusCode}", 
+                    symbol, response.StatusCode);
+                return null;
+            }
+
+            var root = await response.ReadAsJsonAsync<JsonElement>();
+
+            // Parse company details from Yahoo Finance response
+            if (!root.TryGetProperty("quoteSummary", out var quoteSummary) || 
+                !quoteSummary.TryGetProperty("result", out var results))
+            {
+                _logger.LogWarning("Unexpected response structure for company info {Symbol}", symbol);
+                return null;
+            }
+
+            var result = results.EnumerateArray().FirstOrDefault();
+            if (result.ValueKind == JsonValueKind.Undefined)
+            {
+                _logger.LogWarning("No company info found for symbol {Symbol}", symbol);
+                return null;
+            }
+
+            // Get asset profile and price data
+            var profile = result.TryGetProperty("assetProfile", out var assetProfile) 
+                ? assetProfile 
+                : new JsonElement();
+            
+            var price = result.TryGetProperty("price", out var priceData) 
+                ? priceData 
+                : new JsonElement();
+
+            return new CompanyInfoDto
+            {
+                Symbol = symbol,
+                Name = GetJsonProperty(price, "longName") ?? GetJsonProperty(price, "shortName") ?? symbol,
+                Exchange = GetJsonProperty(price, "exchangeName") ?? GetJsonProperty(price, "exchange"),
+                Sector = GetJsonProperty(profile, "sector"),
+                Industry = GetJsonProperty(profile, "industry"),
+                Description = GetJsonProperty(profile, "longBusinessSummary"),
+                Currency = GetJsonProperty(price, "currency") ?? "USD",
+                Country = GetJsonProperty(profile, "country")
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching company info for symbol {Symbol}", symbol);
+            return null;
+        }
     }
 
     public async Task<List<ExternalSecuritySearchDto>> SearchSecuritiesAsync(string query, int limit = 10)
     {
-        throw new NotImplementedException();
+        try
+        {
+            var url = $"{_settings.BaseUrl}/api/autocomplete?region={_settings.Region}&search={Uri.EscapeDataString(query)}";
+
+            _logger.LogInformation("Searching for securities with query: {Query}", query);
+
+            var response = await _httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to search securities. Query: {Query}, Status Code: {StatusCode}", 
+                    query, response.StatusCode);
+                return new List<ExternalSecuritySearchDto>();
+            }
+
+            var root = await response.ReadAsJsonAsync<JsonElement>();
+
+            if (!root.TryGetProperty("ResultSet", out var resultSet) || 
+                !resultSet.TryGetProperty("Result", out var resultsArray))
+            {
+                _logger.LogWarning("Unexpected search response structure for query: {Query}", query);
+                return new List<ExternalSecuritySearchDto>();
+            }
+
+            var results = new List<ExternalSecuritySearchDto>();
+
+            foreach (var item in resultsArray.EnumerateArray().Take(limit))
+            {
+                results.Add(new ExternalSecuritySearchDto
+                {
+                    Symbol = GetJsonProperty(item, "symbol") ?? string.Empty,
+                    Name = GetJsonProperty(item, "name") ?? GetJsonProperty(item, "longname") ?? string.Empty,
+                    Type = GetJsonProperty(item, "quoteType") ?? GetJsonProperty(item, "type"),
+                    Region = GetJsonProperty(item, "exchDisp") ?? GetJsonProperty(item, "exchange"),
+                    Currency = "USD" // Yahoo Finance search doesn't always return currency
+                });
+            }
+
+            return results;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching securities with query {Query}", query);
+            return new List<ExternalSecuritySearchDto>();
+        }
     }
 
     public async Task<List<HistoricalPriceDto>?> GetHistoricalPricesAsync(string symbol, DateTime startDate, DateTime endDate)
     {
-        throw new NotImplementedException();
+        try
+        {
+            // Convert dates to Unix timestamps
+            var startTimestamp = new DateTimeOffset(startDate).ToUnixTimeSeconds();
+            var endTimestamp = new DateTimeOffset(endDate).ToUnixTimeSeconds();
+
+            var url = $"{_settings.BaseUrl}/api/stock/get-historical-data?region={_settings.Region}&symbol={symbol}" +
+                     $"&period1={startTimestamp}&period2={endTimestamp}&interval=1d";
+
+            _logger.LogInformation("Fetching historical prices for {Symbol} from {StartDate} to {EndDate}", 
+                symbol, startDate, endDate);
+
+            var response = await _httpClient.GetAsync(url);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("Failed to fetch historical prices for {Symbol}. Status Code: {StatusCode}", 
+                    symbol, response.StatusCode);
+                return null;
+            }
+
+            var root = await response.ReadAsJsonAsync<JsonElement>();
+
+            // Parse historical data response
+            if (!root.TryGetProperty("prices", out var pricesArray))
+            {
+                _logger.LogWarning("No historical data found for symbol {Symbol}", symbol);
+                return null;
+            }
+
+            var prices = new List<HistoricalPriceDto>();
+
+            foreach (var entry in pricesArray.EnumerateArray())
+            {
+                // Skip entries without required data (dividends, splits, etc.)
+                if (!entry.TryGetProperty("open", out _))
+                    continue;
+
+                var timestamp = GetLongProperty(entry, "date");
+                if (!timestamp.HasValue)
+                    continue;
+
+                var date = DateTimeOffset.FromUnixTimeSeconds(timestamp.Value).DateTime;
+
+                prices.Add(new HistoricalPriceDto
+                {
+                    Date = date,
+                    Open = GetDecimalProperty(entry, "open") ?? 0,
+                    High = GetDecimalProperty(entry, "high") ?? 0,
+                    Low = GetDecimalProperty(entry, "low") ?? 0,
+                    Close = GetDecimalProperty(entry, "close") ?? 0,
+                    Volume = GetLongProperty(entry, "volume") ?? 0
+                });
+            }
+
+            return prices.OrderBy(p => p.Date).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error fetching historical prices for symbol {Symbol}", symbol);
+            return null;
+        }
     }
 
     #region Helper Methods for JSON Parsing
 
-    private static string GetJsonProperty(JsonElement element, string propertyName)
+    /// <summary>
+    /// Gets a string property from a JSON element
+    /// </summary>
+    private static string? GetJsonProperty(JsonElement element, string propertyName)
     {
-        return element.TryGetProperty(propertyName, out var prop)
-            ? prop.GetString() ?? string.Empty
-            : string.Empty;
+        if (!element.TryGetProperty(propertyName, out var prop))
+            return null;
+
+        return prop.ValueKind == JsonValueKind.String 
+            ? prop.GetString() 
+            : null;
     }
 
+    /// <summary>
+    /// Gets a decimal property, handling both raw values and nested "raw" properties
+    /// Yahoo Finance often returns: { "raw": 123.45, "fmt": "123.45" }
+    /// </summary>
     private static decimal? GetDecimalProperty(JsonElement element, string propertyName)
     {
-        if (element.TryGetProperty(propertyName, out var prop) && prop.TryGetProperty("raw", out var rawValue))
+        if (!element.TryGetProperty(propertyName, out var prop))
+            return null;
+
+        // Case 1: Direct number value
+        if (prop.ValueKind == JsonValueKind.Number)
         {
-            if (rawValue.TryGetDecimal(out var decimalValue))
+            return prop.TryGetDecimal(out var value) ? value : null;
+        }
+
+        // Case 2: Nested object with "raw" property
+        if (prop.ValueKind == JsonValueKind.Object && prop.TryGetProperty("raw", out var rawValue))
+        {
+            if (rawValue.ValueKind == JsonValueKind.Number)
             {
-                return decimalValue;
+                return rawValue.TryGetDecimal(out var value) ? value : null;
             }
         }
+
+        // Case 3: String representation
+        if (prop.ValueKind == JsonValueKind.String)
+        {
+            var str = prop.GetString();
+            return decimal.TryParse(str, out var value) ? value : null;
+        }
+
         return null;
     }
 
-    private static decimal? GetRawDecimalProperty(JsonElement element, string propertyName)
-    {
-        if (element.TryGetProperty(propertyName, out var prop) && prop.TryGetProperty("raw", out var rawValue))
-        {
-            if (rawValue.TryGetDecimal(out var decimalValue))
-            {
-                return decimalValue;
-            }
-        }
-        return null;
-    }
-
+    /// <summary>
+    /// Gets a long property, handling both raw values and nested "raw" properties
+    /// </summary>
     private static long? GetLongProperty(JsonElement element, string propertyName)
     {
-        if (element.TryGetProperty(propertyName, out var prop) && prop.TryGetProperty("raw", out var rawValue))
-        {
-            if (rawValue.TryGetInt64(out var longValue))
-            {
-                return longValue;
-            }
-        }
-        return null;
-    }
+        if (!element.TryGetProperty(propertyName, out var prop))
+            return null;
 
-    private static long? GetRawLongProperty(JsonElement element, string propertyName)
-    {
-        if (element.TryGetProperty(propertyName, out var prop) && prop.TryGetProperty("raw", out var rawValue))
+        // Case 1: Direct number value
+        if (prop.ValueKind == JsonValueKind.Number)
         {
-            if (rawValue.TryGetInt64(out var longValue))
+            return prop.TryGetInt64(out var value) ? value : null;
+        }
+
+        // Case 2: Nested object with "raw" property
+        if (prop.ValueKind == JsonValueKind.Object && prop.TryGetProperty("raw", out var rawValue))
+        {
+            if (rawValue.ValueKind == JsonValueKind.Number)
             {
-                return longValue;
+                return rawValue.TryGetInt64(out var value) ? value : null;
             }
         }
+
+        // Case 3: String representation
+        if (prop.ValueKind == JsonValueKind.String)
+        {
+            var str = prop.GetString();
+            return long.TryParse(str, out var value) ? value : null;
+        }
+
         return null;
     }
 
