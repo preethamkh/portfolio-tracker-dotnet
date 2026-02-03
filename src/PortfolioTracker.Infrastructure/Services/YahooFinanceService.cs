@@ -9,7 +9,7 @@ using System.Text.Json;
 namespace PortfolioTracker.Infrastructure.Services;
 
 /// <summary>
-/// Yahoo Finance API implementation via RapidAPI.
+/// Yahoo Finance API implementation via RapidAPI (yahoo-finance166).
 /// Provides stock quotes, company info, search, and historical data.
 /// </summary>
 public class YahooFinanceService : IStockDataService
@@ -29,15 +29,16 @@ public class YahooFinanceService : IStockDataService
 
         // Configure RapidAPI headers (required for authentication)
         _httpClient.DefaultRequestHeaders.Clear();
-        _httpClient.DefaultRequestHeaders.Add("X-RapidAPI-Key", _settings.ApiKey);
-        _httpClient.DefaultRequestHeaders.Add("X-RapidAPI-Host", _settings.RapidApiHost);
+        _httpClient.DefaultRequestHeaders.Add("x-rapidapi-key", _settings.ApiKey);
+        _httpClient.DefaultRequestHeaders.Add("x-rapidapi-host", _settings.RapidApiHost);
     }
 
     public async Task<StockQuoteDto?> GetQuoteAsync(string symbol)
     {
         try
         {
-            var url = $"{_settings.BaseUrl}/api/stock/get-price?region={_settings.Region}&symbol={symbol}";
+            // /market/v2/get-quotes
+            var url = $"{_settings.BaseUrl}/market/v2/get-quotes?region={_settings.Region}&symbols={symbol}";
 
             _logger.LogInformation("Fetching quote for {Symbol} from Yahoo Finance", symbol);
 
@@ -45,15 +46,17 @@ public class YahooFinanceService : IStockDataService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Failed to fetch quote for {Symbol}. Status Code: {StatusCode}", symbol, response.StatusCode);
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to fetch quote for {Symbol}. Status: {StatusCode}, Response: {Response}",
+                    symbol, response.StatusCode, errorContent);
                 return null;
             }
 
             var root = await response.ReadAsJsonAsync<JsonElement>();
 
-            // Parse Yahoo Finance response
-            if (!root.TryGetProperty("quoteSummary", out var quoteSummary) || 
-                !quoteSummary.TryGetProperty("result", out var results))
+            // Response structure: { "quoteResponse": { "result": [...], "error": null } }
+            if (!root.TryGetProperty("quoteResponse", out var quoteResponse) ||
+                !quoteResponse.TryGetProperty("result", out var results))
             {
                 _logger.LogWarning("Unexpected response structure for symbol {Symbol}", symbol);
                 return null;
@@ -66,21 +69,15 @@ public class YahooFinanceService : IStockDataService
                 return null;
             }
 
-            if (!result.TryGetProperty("price", out var price))
-            {
-                _logger.LogWarning("Price data not found for symbol {Symbol}", symbol);
-                return null;
-            }
-
             return new StockQuoteDto
             {
-                Symbol = GetJsonProperty(price, "symbol") ?? symbol,
-                Price = GetDecimalProperty(price, "regularMarketPrice") ?? 0,
-                Change = GetDecimalProperty(price, "regularMarketChange"),
-                ChangePercent = GetDecimalProperty(price, "regularMarketChangePercent"),
-                Volume = GetLongProperty(price, "regularMarketVolume"),
+                Symbol = GetJsonProperty(result, "symbol") ?? symbol,
+                Price = GetDecimalProperty(result, "regularMarketPrice") ?? 0,
+                Change = GetDecimalProperty(result, "regularMarketChange"),
+                ChangePercent = GetDecimalProperty(result, "regularMarketChangePercent"),
+                Volume = GetLongProperty(result, "regularMarketVolume"),
                 Timestamp = DateTime.UtcNow,
-                Currency = GetJsonProperty(price, "currency") ?? "USD"
+                Currency = GetJsonProperty(result, "currency") ?? "USD"
             };
         }
         catch (Exception ex)
@@ -94,7 +91,8 @@ public class YahooFinanceService : IStockDataService
     {
         try
         {
-            var url = $"{_settings.BaseUrl}/api/stock/get-details?region={_settings.Region}&symbol={symbol}";
+            // /stock/v2/get-profile
+            var url = $"{_settings.BaseUrl}/stock/v2/get-profile?symbol={symbol}&region={_settings.Region}";
 
             _logger.LogInformation("Fetching company info for {Symbol} from Yahoo Finance", symbol);
 
@@ -102,41 +100,30 @@ public class YahooFinanceService : IStockDataService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Failed to fetch company info for {Symbol}. Status Code: {StatusCode}", 
-                    symbol, response.StatusCode);
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to fetch company info for {Symbol}. Status: {StatusCode}, Response: {Response}",
+                    symbol, response.StatusCode, errorContent);
                 return null;
             }
 
             var root = await response.ReadAsJsonAsync<JsonElement>();
 
-            // Parse company details from Yahoo Finance response
-            if (!root.TryGetProperty("quoteSummary", out var quoteSummary) || 
-                !quoteSummary.TryGetProperty("result", out var results))
-            {
-                _logger.LogWarning("Unexpected response structure for company info {Symbol}", symbol);
-                return null;
-            }
-
-            var result = results.EnumerateArray().FirstOrDefault();
-            if (result.ValueKind == JsonValueKind.Undefined)
-            {
-                _logger.LogWarning("No company info found for symbol {Symbol}", symbol);
-                return null;
-            }
-
-            // Get asset profile and price data
-            var profile = result.TryGetProperty("assetProfile", out var assetProfile) 
-                ? assetProfile 
+            // Response structure: { "assetProfile": {...}, "price": {...} }
+            var profile = root.TryGetProperty("assetProfile", out var assetProfile)
+                ? assetProfile
                 : new JsonElement();
-            
-            var price = result.TryGetProperty("price", out var priceData) 
-                ? priceData 
+
+            var price = root.TryGetProperty("price", out var priceData)
+                ? priceData
                 : new JsonElement();
+
+            // Get symbol from price or root
+            var returnedSymbol = GetJsonProperty(price, "symbol") ?? GetJsonProperty(root, "symbol") ?? symbol;
 
             return new CompanyInfoDto
             {
-                Symbol = symbol,
-                Name = GetJsonProperty(price, "longName") ?? GetJsonProperty(price, "shortName") ?? symbol,
+                Symbol = returnedSymbol,
+                Name = GetJsonProperty(price, "longName") ?? GetJsonProperty(price, "shortName") ?? returnedSymbol,
                 Exchange = GetJsonProperty(price, "exchangeName") ?? GetJsonProperty(price, "exchange"),
                 Sector = GetJsonProperty(profile, "sector"),
                 Industry = GetJsonProperty(profile, "industry"),
@@ -156,7 +143,8 @@ public class YahooFinanceService : IStockDataService
     {
         try
         {
-            var url = $"{_settings.BaseUrl}/api/autocomplete?region={_settings.Region}&search={Uri.EscapeDataString(query)}";
+            // /auto-complete
+            var url = $"{_settings.BaseUrl}/auto-complete?q={Uri.EscapeDataString(query)}&region={_settings.Region}";
 
             _logger.LogInformation("Searching for securities with query: {Query}", query);
 
@@ -164,15 +152,16 @@ public class YahooFinanceService : IStockDataService
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Failed to search securities. Query: {Query}, Status Code: {StatusCode}", 
-                    query, response.StatusCode);
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to search securities. Query: {Query}, Status: {StatusCode}, Response: {Response}",
+                    query, response.StatusCode, errorContent);
                 return new List<ExternalSecuritySearchDto>();
             }
 
             var root = await response.ReadAsJsonAsync<JsonElement>();
 
-            if (!root.TryGetProperty("ResultSet", out var resultSet) || 
-                !resultSet.TryGetProperty("Result", out var resultsArray))
+            // Response structure: { "quotes": [...] }
+            if (!root.TryGetProperty("quotes", out var quotesArray))
             {
                 _logger.LogWarning("Unexpected search response structure for query: {Query}", query);
                 return new List<ExternalSecuritySearchDto>();
@@ -180,13 +169,17 @@ public class YahooFinanceService : IStockDataService
 
             var results = new List<ExternalSecuritySearchDto>();
 
-            foreach (var item in resultsArray.EnumerateArray().Take(limit))
+            foreach (var item in quotesArray.EnumerateArray().Take(limit))
             {
+                var symbol = GetJsonProperty(item, "symbol");
+                if (string.IsNullOrEmpty(symbol))
+                    continue;
+
                 results.Add(new ExternalSecuritySearchDto
                 {
-                    Symbol = GetJsonProperty(item, "symbol") ?? string.Empty,
-                    Name = GetJsonProperty(item, "name") ?? GetJsonProperty(item, "longname") ?? string.Empty,
-                    Type = GetJsonProperty(item, "quoteType") ?? GetJsonProperty(item, "type"),
+                    Symbol = symbol,
+                    Name = GetJsonProperty(item, "longname") ?? GetJsonProperty(item, "shortname") ?? symbol,
+                    Type = GetJsonProperty(item, "quoteType") ?? GetJsonProperty(item, "typeDisp"),
                     Region = GetJsonProperty(item, "exchDisp") ?? GetJsonProperty(item, "exchange"),
                     Currency = "USD" // Yahoo Finance search doesn't always return currency
                 });
@@ -205,28 +198,25 @@ public class YahooFinanceService : IStockDataService
     {
         try
         {
-            // Convert dates to Unix timestamps
-            var startTimestamp = new DateTimeOffset(startDate).ToUnixTimeSeconds();
-            var endTimestamp = new DateTimeOffset(endDate).ToUnixTimeSeconds();
+            // /stock/v3/get-historical-data
+            var url = $"{_settings.BaseUrl}/stock/v3/get-historical-data?symbol={symbol}&region={_settings.Region}";
 
-            var url = $"{_settings.BaseUrl}/api/stock/get-historical-data?region={_settings.Region}&symbol={symbol}" +
-                     $"&period1={startTimestamp}&period2={endTimestamp}&interval=1d";
-
-            _logger.LogInformation("Fetching historical prices for {Symbol} from {StartDate} to {EndDate}", 
+            _logger.LogInformation("Fetching historical prices for {Symbol} from {StartDate} to {EndDate}",
                 symbol, startDate, endDate);
 
             var response = await _httpClient.GetAsync(url);
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Failed to fetch historical prices for {Symbol}. Status Code: {StatusCode}", 
-                    symbol, response.StatusCode);
+                var errorContent = await response.Content.ReadAsStringAsync();
+                _logger.LogWarning("Failed to fetch historical prices for {Symbol}. Status: {StatusCode}, Response: {Response}",
+                    symbol, response.StatusCode, errorContent);
                 return null;
             }
 
             var root = await response.ReadAsJsonAsync<JsonElement>();
 
-            // Parse historical data response
+            // Response structure: { "prices": [...], "isPending": false, ... }
             if (!root.TryGetProperty("prices", out var pricesArray))
             {
                 _logger.LogWarning("No historical data found for symbol {Symbol}", symbol);
@@ -246,6 +236,10 @@ public class YahooFinanceService : IStockDataService
                     continue;
 
                 var date = DateTimeOffset.FromUnixTimeSeconds(timestamp.Value).DateTime;
+
+                // Filter by date range
+                if (date < startDate || date > endDate)
+                    continue;
 
                 prices.Add(new HistoricalPriceDto
                 {
@@ -277,8 +271,8 @@ public class YahooFinanceService : IStockDataService
         if (!element.TryGetProperty(propertyName, out var prop))
             return null;
 
-        return prop.ValueKind == JsonValueKind.String 
-            ? prop.GetString() 
+        return prop.ValueKind == JsonValueKind.String
+            ? prop.GetString()
             : null;
     }
 
