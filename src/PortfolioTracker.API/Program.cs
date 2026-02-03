@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Polly;
 using PortfolioTracker.API.Data;
@@ -228,14 +230,11 @@ builder.Services.AddStackExchangeRedisCache(options =>
 // STOCK DATA SERVICE WITH PROVIDER SWITCHING & CACHING (DECORATOR PATTERN)
 // ======================================================
 
-// Get active provider from configuration
-var activeProvider = builder.Configuration["StockDataProvider:ActiveProvider"] ?? "AlphaVantage";
-
 // Configure settings for both providers
 builder.Services.Configure<AlphaVantageSettings>(builder.Configuration.GetSection("AlphaVantage"));
 builder.Services.Configure<YahooFinanceSettings>(builder.Configuration.GetSection("YahooFinance"));
 
-// Register HttpClient for AlphaVantageService
+// Register HttpClient for AlphaVantageService  
 builder.Services.AddHttpClient<AlphaVantageService>(client =>
 {
     client.Timeout = TimeSpan.FromSeconds(30);
@@ -256,6 +255,8 @@ builder.Services.AddHttpClient<YahooFinanceService>(client =>
 // Register IStockDataService with provider switching and caching decorator
 builder.Services.AddScoped<IStockDataService>(serviceProvider =>
 {
+    var activeProvider = builder.Configuration["StockDataProvider:ActiveProvider"] ?? "AlphaVantage";
+
     // Select the provider based on configuration
     IStockDataService innerService = activeProvider.ToLower() switch
     {
@@ -265,16 +266,16 @@ builder.Services.AddScoped<IStockDataService>(serviceProvider =>
     };
 
     // Wrap the selected provider with caching decorator
-    var cache = serviceProvider.GetRequiredService<Microsoft.Extensions.Caching.Distributed.IDistributedCache>();
+    var cache = serviceProvider.GetRequiredService<IDistributedCache>();
     var logger = serviceProvider.GetRequiredService<ILogger<StockDataCachingService>>();
-    var cacheSettings = serviceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<StockDataCacheSettings>>();
+    var cacheSettings = serviceProvider.GetRequiredService<IOptions<StockDataCacheSettings>>();
 
     var cachedService = new StockDataCachingService(innerService, cache, logger, cacheSettings);
-    
+
     // Log which provider is being used
     var startupLogger = serviceProvider.GetRequiredService<ILogger<Program>>();
-    startupLogger.LogInformation("Stock Data Provider configured: {Provider}", activeProvider);
-    
+    startupLogger.LogInformation("Stock Data Provider configured: {Provider} with caching", activeProvider);
+
     return cachedService;
 });
 
