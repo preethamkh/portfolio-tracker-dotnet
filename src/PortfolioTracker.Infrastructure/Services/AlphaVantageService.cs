@@ -1,10 +1,10 @@
 ﻿using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using PortfolioTracker.Core.Configuration;
 using PortfolioTracker.Core.DTOs.ExternalData;
 using PortfolioTracker.Core.Interfaces.Services;
 using System.Text.Json;
 using PortfolioTracker.Core.Helpers;
+using PortfolioTracker.Infrastructure.Configuration;
 
 namespace PortfolioTracker.Infrastructure.Services;
 
@@ -14,8 +14,6 @@ public class AlphaVantageService(
     ILogger<AlphaVantageService> logger)
     : IStockDataService
 {
-    private readonly HttpClient _httpClient = httpClient;
-    private readonly ILogger<AlphaVantageService> _logger = logger;
     private readonly string _apiKey = settings.Value.ApiKey;
     private readonly string _baseUrl = settings.Value.BaseUrl;
 
@@ -24,7 +22,7 @@ public class AlphaVantageService(
         try
         {
             var url = $"{_baseUrl}?function=GLOBAL_QUOTE&symbol={symbol}&apikey={_apiKey}";
-            var response = await _httpClient.GetAsync(url);
+            var response = await httpClient.GetAsync(url);
 
             var root = await response.ReadAsJsonAsync<JsonElement>();
 
@@ -33,7 +31,7 @@ public class AlphaVantageService(
             // Or - an "Error Message" property if the request is invalid or the symbol is not found.
             if (root.TryGetProperty("Note", out _) || root.TryGetProperty("Error Message", out _))
             {
-                _logger.LogWarning("Alpha Vantage API limit or error for symbol {Symbol}", symbol);
+                logger.LogWarning("Alpha Vantage API limit or error for symbol {Symbol}", symbol);
                 return null;
             }
 
@@ -55,7 +53,7 @@ public class AlphaVantageService(
             //}
             if (!root.TryGetProperty("Global Quote", out var quote))
             {
-                _logger.LogWarning("No quote data found for symbol {Symbol}", symbol);
+                logger.LogWarning("No quote data found for symbol {Symbol}", symbol);
                 return null;
             }
 
@@ -74,7 +72,7 @@ public class AlphaVantageService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching quote for symbol {Symbol}", symbol);
+            logger.LogError(ex, "Error fetching quote for symbol {Symbol}", symbol);
             return null;
         }
     }
@@ -84,13 +82,13 @@ public class AlphaVantageService(
         try
         {
             var url = $"{_baseUrl}?function=OVERVIEW&symbol={symbol}&apikey={_apiKey}";
-            var response = await _httpClient.GetAsync(url);
+            var response = await httpClient.GetAsync(url);
 
             var root = await response.ReadAsJsonAsync<JsonElement>();
 
             if (root.TryGetProperty("Note", out _) || !root.TryGetProperty("Symbol", out _))
             {
-                _logger.LogWarning("No company info found for symbol {Symbol}", symbol);
+                logger.LogWarning("No company info found for symbol {Symbol}", symbol);
                 return null;
             }
 
@@ -108,7 +106,7 @@ public class AlphaVantageService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching company info for symbol {Symbol}", symbol);
+            logger.LogError(ex, "Error fetching company info for symbol {Symbol}", symbol);
             return null;
         }
     }
@@ -118,7 +116,7 @@ public class AlphaVantageService(
         try
         {
             var url = $"{_baseUrl}?function=SYMBOL_SEARCH&keywords={query}&apikey={_apiKey}";
-            var response = await _httpClient.GetAsync(url);
+            var response = await httpClient.GetAsync(url);
 
             var root = await response.ReadAsJsonAsync<JsonElement>();
 
@@ -182,7 +180,7 @@ public class AlphaVantageService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error searching securities with query {Query}", query);
+            logger.LogError(ex, "Error searching securities with query {Query}", query);
             return new List<ExternalSecuritySearchDto>();
         }
     }
@@ -195,12 +193,12 @@ public class AlphaVantageService(
             // Alpha Vantage returns full history, we filter after
             var url = $"{_baseUrl}?function=TIME_SERIES_DAILY&symbol={symbol}&outputsize=full&apikey={_apiKey}";
 
-            var response = await _httpClient.GetAsync(url);
+            var response = await httpClient.GetAsync(url);
             var root = await response.ReadAsJsonAsync<JsonElement>();
 
             if (!root.TryGetProperty("Time Series (Daily)", out var timeSeries))
             {
-                _logger.LogWarning("No historical data found for symbol {Symbol}", symbol);
+                logger.LogWarning("No historical data found for symbol {Symbol}", symbol);
                 return null;
             }
 
@@ -230,7 +228,7 @@ public class AlphaVantageService(
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error fetching historical prices for symbol {Symbol}", symbol);
+            logger.LogError(ex, "Error fetching historical prices for symbol {Symbol}", symbol);
             return null;
         }
     }
