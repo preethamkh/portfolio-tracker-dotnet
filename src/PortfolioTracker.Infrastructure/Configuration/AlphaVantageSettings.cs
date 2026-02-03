@@ -1,4 +1,4 @@
-﻿namespace PortfolioTracker.Core.Configuration;
+﻿namespace PortfolioTracker.Infrastructure.Configuration;
 
 /// <summary>
 /// Configuration settings for Alpha Vantage API integration.
