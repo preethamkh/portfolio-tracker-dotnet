@@ -20,7 +20,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PortfolioTracker.UnitTests"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PortfolioTracker.IntegrationTests", "tests\PortfolioTracker.IntegrationTests\PortfolioTracker.IntegrationTests.csproj", "{37024E7F-C708-F336-8200-C70F7ACBAFDE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PortfolioTracker.Web", "PortfolioTracker.Web\PortfolioTracker.Web.csproj", "{26444524-7C0B-4F37-8EDE-C7C0A77B1C05}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PortfolioTracker.Web", "src\PortfolioTracker.Web\PortfolioTracker.Web.csproj", "{26444524-7C0B-4F37-8EDE-C7C0A77B1C05}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
