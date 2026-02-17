@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "css:build": "npx tailwindcss -i ./wwwroot/css/app.css -o ./wwwroot/css/output.css",
-    "css:watch": "npx tailwindcss -i ./wwwroot/css/app.css -o ./wwwroot/css/output.css --watch"
+    "css:build": "tailwindcss -i ./wwwroot/css/app.css -o ./wwwroot/css/output.css"
   },
   "keywords": [],
   "author": "",
