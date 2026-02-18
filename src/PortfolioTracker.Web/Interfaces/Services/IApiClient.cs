@@ -4,12 +4,12 @@ using PortfolioTracker.Web.Models.ViewModels.Portfolio;
 using PortfolioTracker.Web.Models.ViewModels.Securities;
 using PortfolioTracker.Web.Models.ViewModels.Transactions;
 
-namespace PortfolioTracker.Web.Services;
+namespace PortfolioTracker.Web.Interfaces.Services;
 
 public interface IApiClient
 {
     Task<AuthResponseDto?> LoginAsync(LoginViewModel model);
-    Task<AuthResponseDto?> RegisterAsync(LoginViewModel model);
+    Task<AuthResponseDto?> RegisterAsync(RegisterViewModel model);
 
     Task<List<PortfolioViewModel>> GetPortfoliosAsync();
     Task<PortfolioViewModel?> GetPortfolioAsync(int id);
