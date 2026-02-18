@@ -1,7 +1,25 @@
 var builder = WebApplication.CreateBuilder(args);
 
+// -----------------------------------------------------------------------
+// Services
+// -----------------------------------------------------------------------
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+
+// Read the backend API base URL from config
+var apiBaseUrl = builder.Configuration["ApiSettings:BaseUrl"] ?? throw new InvalidOperationException("ApiSettings:BaseUrl is not configured");
+
+// Typed HttpClient - managed lifecycle, avoids socket exhaustion
+
+
+
+
+
+
+
+
+
 
 var app = builder.Build();
 
