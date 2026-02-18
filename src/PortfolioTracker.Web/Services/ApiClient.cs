@@ -10,23 +10,13 @@ using System.Text.Json;
 
 namespace PortfolioTracker.Web.Services;
 
-public class ApiClient : IApiClient
+public class ApiClient(HttpClient httpClient, ITokenService tokenService, ILogger<ApiClient> logger)
+    : IApiClient
 {
-    private readonly HttpClient _httpClient;
-    private readonly ITokenService _tokenService;
-    private readonly ILogger<ApiClient> _logger;
-
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         PropertyNameCaseInsensitive = true
     };
-
-    public ApiClient(HttpClient httpClient, ITokenService tokenService, ILogger<ApiClient> logger)
-    {
-        _httpClient = httpClient;
-        _tokenService = tokenService;
-        _logger = logger;
-    }
 
     // -----------------------------------------------------------------------
     // Private helpers
@@ -34,10 +24,10 @@ public class ApiClient : IApiClient
 
     private void AttachAuthHeader()
     {
-        var token = _tokenService.GetToken();
+        var token = tokenService.GetToken();
         if (!string.IsNullOrEmpty(token))
         {
-            _httpClient.DefaultRequestHeaders.Authorization =
+            httpClient.DefaultRequestHeaders.Authorization =
                 new AuthenticationHeaderValue("Bearer", token);
         }
     }
@@ -48,11 +38,11 @@ public class ApiClient : IApiClient
 
         try
         {
-            var response = await _httpClient.GetAsync(endpoint);
+            var response = await httpClient.GetAsync(endpoint);
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("GET {Endpoint} returned {StatusCode}", endpoint, response.StatusCode);
+                logger.LogWarning("GET {Endpoint} returned {StatusCode}", endpoint, response.StatusCode);
                 return default;
             }
 
@@ -61,7 +51,7 @@ public class ApiClient : IApiClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during GET {Endpoint}", endpoint);
+            logger.LogError(ex, "Error during GET {Endpoint}", endpoint);
             return default;
         }
     }
@@ -74,11 +64,11 @@ public class ApiClient : IApiClient
         {
             var json = JsonSerializer.Serialize(body);
             var content = new StringContent(json, Encoding.UTF8, "application/json");
-            var response = await _httpClient.PostAsync(endpoint, content);
+            var response = await httpClient.PostAsync(endpoint, content);
 
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("POST {Endpoint} returned {StatusCode}", endpoint, response.StatusCode);
+                logger.LogWarning("POST {Endpoint} returned {StatusCode}", endpoint, response.StatusCode);
                 return default;
             }
 
@@ -87,7 +77,7 @@ public class ApiClient : IApiClient
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during POST {Endpoint}", endpoint);
+            logger.LogError(ex, "Error during POST {Endpoint}", endpoint);
             return default;
         }
     }
@@ -98,12 +88,12 @@ public class ApiClient : IApiClient
 
         try
         {
-            var response = await _httpClient.DeleteAsync(endpoint);
+            var response = await httpClient.DeleteAsync(endpoint);
             return response.IsSuccessStatusCode;
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error during DELETE {Endpoint}", endpoint);
+            logger.LogError(ex, "Error during DELETE {Endpoint}", endpoint);
             return false;
         }
     }
