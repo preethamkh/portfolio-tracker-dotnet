@@ -12,7 +12,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Models\ViewModels\Auth\" />
     <Folder Include="Models\ViewModels\Holdings\" />
     <Folder Include="Models\ViewModels\Securities\" />
     <Folder Include="Models\ViewModels\Transactions\" />

@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace PortfolioTracker.Web.Models.ViewModels;
+namespace PortfolioTracker.Web.Models.ViewModels.Auth;
 
 public class LoginViewModel
 {
