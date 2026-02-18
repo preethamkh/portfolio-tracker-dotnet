@@ -17,7 +17,10 @@
     <Folder Include="Models\ViewModels\Securities\" />
     <Folder Include="Models\ViewModels\Transactions\" />
     <Folder Include="Models\ViewModels\Portfolio\" />
-    <Folder Include="Services\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PortfolioTracker.Core\PortfolioTracker.Core.csproj" />
   </ItemGroup>
 
 </Project>
