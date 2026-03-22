@@ -26,7 +26,7 @@
   }
 
   .form-input {
-    @apply w-full rounded-lg border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500;
+    @apply w-full px-4 py-2 rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 focus:outline-none transition-colors;
   }
 
   .table-header {
