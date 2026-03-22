@@ -1,8 +1,9 @@
+using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using PortfolioTracker.Web.Models;
-using System.Diagnostics;
 
 namespace PortfolioTracker.Web.Controllers;
+
 public class HomeController : Controller
 {
     private readonly ILogger<HomeController> _logger;
@@ -14,7 +15,14 @@ public class HomeController : Controller
 
     public IActionResult Index()
     {
-        return View();
+        // If user is authenticated, redirect to Dashboard
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            return RedirectToAction("Index", "Dashboard");
+        }
+
+        // Otherwise, redirect to login
+        return RedirectToAction("Login", "Auth");
     }
 
     public IActionResult Privacy()
