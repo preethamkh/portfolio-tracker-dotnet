@@ -1,0 +1,108 @@
+@model PortfolioTracker.Web.Models.ViewModels.Dashboard.DashboardViewModel
+@{
+ViewData["Title"] = "Dashboard";
+Layout = "_Layout";
+}
+
+<!-- Summary Cards -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+
+    <div class="card">
+        <p class="text-sm font-medium text-gray-500">Total Portfolio Value</p>
+        <p class="text-2xl font-bold text-gray-900 mt-1">
+            @Model.TotalValue.ToString("C")
+        </p>
+    </div>
+
+    <div class="card">
+        <p class="text-sm font-medium text-gray-500">Total Gain / Loss</p>
+        <p class="text-2xl font-bold mt-1 @(Model.TotalGainLoss >= 0 ? " text-green-600" : "text-red-600" )">
+            @(Model.TotalGainLoss >= 0 ? "+" : "")@Model.TotalGainLoss.ToString("C")
+        </p>
+        <p class="text-sm @(Model.TotalGainLoss >= 0 ? " text-green-600" : "text-red-600" ) mt-0.5">
+            @(Model.TotalGainLossPercent >= 0 ? "+" : "")@Model.TotalGainLossPercent.ToString("F2")%
+        </p>
+    </div>
+
+    <div class="card">
+        <p class="text-sm font-medium text-gray-500">Total Portfolios</p>
+        <p class="text-2xl font-bold text-gray-900 mt-1">@Model.Portfolios.Count</p>
+    </div>
+
+    <div class="card">
+        <p class="text-sm font-medium text-gray-500">Total Holdings</p>
+        <p class="text-2xl font-bold text-gray-900 mt-1">@Model.TotalHoldings</p>
+    </div>
+
+</div>
+
+<!-- Portfolios Table -->
+<div class="card">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-lg font-semibold text-gray-900">Your Portfolios</h2>
+        <a asp-controller="Portfolio" asp-action="Create" class="btn-primary text-sm">
+            + New Portfolio
+        </a>
+    </div>
+
+    @if (!Model.Portfolios.Any())
+    {
+    <div class="text-center py-12">
+        <svg class="mx-auto w-12 h-12 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+        </svg>
+        <p class="text-gray-500 mb-4">No portfolios yet.</p>
+        <a asp-controller="Portfolio" asp-action="Create" class="btn-primary">
+            Create your first portfolio
+        </a>
+    </div>
+    }
+    else
+    {
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="table-header">Name</th>
+                    <th class="table-header">Holdings</th>
+                    <th class="table-header">Total Value</th>
+                    <th class="table-header">Gain / Loss</th>
+                    <th class="table-header">Created</th>
+                    <th class="table-header"></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                @foreach (var portfolio in Model.Portfolios)
+                {
+                <tr class="hover:bg-gray-50 transition-colors">
+                    <td class="table-cell font-medium">
+                        <a asp-controller="Portfolio" asp-action="Detail" asp-route-id="@portfolio.Id"
+                            class="text-blue-600 hover:text-blue-700">
+                            @portfolio.Name
+                        </a>
+                    </td>
+                    <td class="table-cell text-gray-500">@portfolio.HoldingsCount</td>
+                    <td class="table-cell font-medium">@portfolio.TotalValue.ToString("C")</td>
+                    <td class="table-cell">
+                        <span class="@(portfolio.TotalGainLoss >= 0 ? " badge-green" : "badge-red" )">
+                            @(portfolio.TotalGainLoss >= 0 ? "+" : "")@portfolio.TotalGainLoss.ToString("C")
+                        </span>
+                    </td>
+                    <td class="table-cell text-gray-500">@portfolio.CreatedAt.ToString("MMM d, yyyy")</td>
+                    <td class="table-cell text-right">
+                        <a asp-controller="Portfolio" asp-action="Detail" asp-route-id="@portfolio.Id"
+                            class="text-blue-600 hover:underline text-sm mr-4">View</a>
+                        <form asp-controller="Portfolio" asp-action="Delete" asp-route-id="@portfolio.Id" method="post"
+                            class="inline" onsubmit="return confirm('Delete this portfolio? This cannot be undone.')">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="text-red-600 hover:underline text-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>

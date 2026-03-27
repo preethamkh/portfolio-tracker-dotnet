@@ -1,0 +1,77 @@
+﻿<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] — Portfolio Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 600: '#2563eb', 700: '#1d4ed8' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @@layer components {
+            .btn-primary   { @@apply bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 cursor-pointer; }
+            .btn-secondary { @@apply bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-4 rounded-lg transition-colors duration-200 cursor-pointer; }
+            .btn-danger    { @@apply bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200 cursor-pointer; }
+            .card          { @@apply bg-white rounded-xl shadow-sm border border-gray-100 p-6; }
+            .form-label    { @@apply block text-sm font-medium text-gray-700 mb-1; }
+            .form-input    { @@apply w-full px-4 py-2 rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-500 focus:outline-none transition-colors; }
+            .table-header  { @@apply px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider; }
+            .table-cell    { @@apply px-6 py-4 whitespace-nowrap text-sm text-gray-900; }
+            .badge-green   { @@apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800; }
+            .badge-red     { @@apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800; }
+            .badge-gray    { @@apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800; }
+        }
+    </style>
+</head>
+
+<body class="h-full">
+
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+    <!-- Authenticated Layout: Top Nav + Content -->
+    <div class="min-h-full flex flex-col">
+        @await Html.PartialAsync("_NavBar")
+
+        <main class="flex-1 p-8">
+            @* Flash messages *@
+            @if (TempData["Success"] != null)
+            {
+            <div class="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg text-green-800 text-sm">
+                @TempData["Success"]
+            </div>
+            }
+            @if (TempData["Error"] != null)
+            {
+            <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800 text-sm">
+                @TempData["Error"]
+            </div>
+            }
+
+            @RenderBody()
+        </main>
+    </div>
+    }
+    else
+    {
+    <!-- Unauthenticated Layout: Centered card -->
+    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div class="w-full max-w-md">
+            @RenderBody()
+        </div>
+    </div>
+    }
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+
+</html>
