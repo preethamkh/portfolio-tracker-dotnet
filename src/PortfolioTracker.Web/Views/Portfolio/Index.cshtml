@@ -1,20 +1,61 @@
-@{
-ViewData["Title"] = "My Portfolios";
-}
-
-<div class="container py-5">
-    <h1>My Portfolios</h1>
-    <p class="lead">Manage your investment portfolios here.</p>
-
-    <div class="alert alert-info">
-        <p>This page is protected - you can only view it when logged in.</p>
-        <p>If you tried to access this without logging in, you were redirected to the login page.</p>
-    </div>
+@model List<PortfolioTracker.Web.Models.ViewModels.Portfolio.PortfolioViewModel>
+    @{
+    ViewData["Title"] = "My Portfolios";
+    Layout = "_Layout";
+    }
 
     <div class="card">
-        <div class="card-body">
-            <p>No portfolios created yet.</p>
-            <a href="#" class="btn btn-primary">Create Portfolio</a>
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-semibold text-gray-900">All Portfolios</h2>
+            <a asp-action="Create" class="btn-primary text-sm">+ New Portfolio</a>
         </div>
+
+        @if (!Model.Any())
+        {
+        <div class="text-center py-12">
+            <p class="text-gray-500 mb-4">You don't have any portfolios yet.</p>
+            <a asp-action="Create" class="btn-primary">Create your first portfolio</a>
+        </div>
+        }
+        else
+        {
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            @foreach (var p in Model)
+            {
+            <div class="border border-gray-200 rounded-xl p-5 hover:shadow-md transition-shadow">
+                <div class="flex items-start justify-between mb-3">
+                    <div>
+                        <h3 class="font-semibold text-gray-900">@p.Name</h3>
+                        @if (!string.IsNullOrEmpty(p.Description))
+                        {
+                        <p class="text-sm text-gray-500 mt-0.5">@p.Description</p>
+                        }
+                    </div>
+                    <span class="badge-gray">@p.HoldingsCount holdings</span>
+                </div>
+
+                <div class="mb-4">
+                    <p class="text-2xl font-bold text-gray-900">@p.TotalValue.ToString("C")</p>
+                    <p class="text-sm @(p.TotalGainLoss >= 0 ? " text-green-600" : "text-red-600" ) font-medium">
+                        @(p.TotalGainLoss >= 0 ? "▲" : "▼") @p.TotalGainLoss.ToString("C")
+                        (@p.TotalGainLossPercent.ToString("F2")%)
+                    </p>
+                </div>
+
+                <div class="flex gap-2">
+                    <a asp-action="Detail" asp-route-id="@p.Id" class="btn-primary text-sm flex-1 text-center">
+                        View Details
+                    </a>
+                    <form asp-action="Delete" asp-route-id="@p.Id" method="post"
+                        onsubmit="return confirm('Delete this portfolio?')">
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn-danger text-sm px-3">
+                            ✕
+                        </button>
+                    </form>
+                </div>
+            </div>
+            }
+        </div>
+        }
     </div>
-</div>

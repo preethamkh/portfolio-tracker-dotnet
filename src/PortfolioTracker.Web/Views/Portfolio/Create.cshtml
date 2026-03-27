@@ -1,0 +1,47 @@
+@model PortfolioTracker.Web.Models.ViewModels.Portfolio.CreatePortfolioViewModel
+@{
+ViewData["Title"] = "New Portfolio";
+Layout = "_Layout";
+}
+
+<div class="max-w-lg">
+    <div class="card">
+        <h2 class="text-lg font-semibold text-gray-900 mb-6">Create a New Portfolio</h2>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+        <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div asp-validation-summary="All" class="text-red-700 text-sm"></div>
+        </div>
+        }
+
+        <form asp-action="Create" method="post" class="space-y-5">
+            @Html.AntiForgeryToken()
+
+            <div>
+                <label asp-for="Name" class="form-label">Portfolio Name</label>
+                <input asp-for="Name" class="form-input" placeholder="e.g. Growth Portfolio" />
+                <span asp-validation-for="Name" class="text-red-600 text-xs mt-1"></span>
+            </div>
+
+            <div>
+                <label asp-for="Description" class="form-label">
+                    Description
+                    <span class="text-gray-400 font-normal">(optional)</span>
+                </label>
+                <textarea asp-for="Description" rows="3" class="form-input"
+                    placeholder="What is this portfolio for?"></textarea>
+                <span asp-validation-for="Description" class="text-red-600 text-xs mt-1"></span>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="btn-primary flex-1">Create Portfolio</button>
+                <a asp-action="Index" class="btn-secondary flex-1 text-center">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+@await Html.PartialAsync("_ValidationScripts")
+}

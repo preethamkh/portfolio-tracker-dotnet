@@ -1,0 +1,87 @@
+@model PortfolioTracker.Web.Models.ViewModels.Portfolio.PortfolioDetailViewModel
+@{
+ViewData["Title"] = Model.Portfolio.Name;
+Layout = "_Layout";
+}
+
+<!-- Portfolio Summary -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="card">
+        <p class="text-sm text-gray-500">Total Value</p>
+        <p class="text-2xl font-bold text-gray-900 mt-1">@Model.Portfolio.TotalValue.ToString("C")</p>
+    </div>
+    <div class="card">
+        <p class="text-sm text-gray-500">Gain / Loss</p>
+        <p class="text-2xl font-bold mt-1 @(Model.Portfolio.TotalGainLoss >= 0 ? " text-green-600" : "text-red-600" )">
+            @(Model.Portfolio.TotalGainLoss >= 0 ? "+" : "")@Model.Portfolio.TotalGainLoss.ToString("C")
+        </p>
+    </div>
+    <div class="card">
+        <p class="text-sm text-gray-500">Holdings</p>
+        <p class="text-2xl font-bold text-gray-900 mt-1">@Model.Holdings.Count</p>
+    </div>
+</div>
+
+<!-- Holdings Table -->
+<div class="card">
+    <div class="flex items-center justify-between mb-6">
+        <h2 class="text-lg font-semibold text-gray-900">Holdings</h2>
+        <a asp-controller="Holdings" asp-action="Create" asp-route-portfolioId="@Model.Portfolio.Id"
+            class="btn-primary text-sm">
+            + Add Holding
+        </a>
+    </div>
+
+    @if (!Model.Holdings.Any())
+    {
+    <div class="text-center py-10">
+        <p class="text-gray-500">No holdings in this portfolio yet.</p>
+    </div>
+    }
+    else
+    {
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="table-header">Symbol</th>
+                    <th class="table-header">Name</th>
+                    <th class="table-header">Shares</th>
+                    <th class="table-header">Avg Cost</th>
+                    <th class="table-header">Current Price</th>
+                    <th class="table-header">Market Value</th>
+                    <th class="table-header">Gain / Loss</th>
+                    <th class="table-header"></th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                @foreach (var h in Model.Holdings)
+                {
+                <tr class="hover:bg-gray-50">
+                    <td class="table-cell font-semibold text-blue-700">@h.Symbol</td>
+                    <td class="table-cell text-gray-700">@h.SecurityName</td>
+                    <td class="table-cell">@h.Quantity.ToString("F4")</td>
+                    <td class="table-cell">@h.AverageCost.ToString("C")</td>
+                    <td class="table-cell">@h.CurrentPrice.ToString("C")</td>
+                    <td class="table-cell font-medium">@h.MarketValue.ToString("C")</td>
+                    <td class="table-cell">
+                        <span class="@(h.GainLoss >= 0 ? " badge-green" : "badge-red" )">
+                            @(h.GainLoss >= 0 ? "+" : "")@h.GainLoss.ToString("C")
+                        </span>
+                    </td>
+                    <td class="table-cell text-right">
+                        <a asp-controller="Transactions" asp-action="Index" asp-route-holdingId="@h.Id"
+                            class="text-blue-600 hover:underline text-sm mr-3">Transactions</a>
+                        <form asp-controller="Holdings" asp-action="Delete" asp-route-id="@h.Id" method="post"
+                            class="inline" onsubmit="return confirm('Remove this holding?')">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="text-red-600 hover:underline text-sm">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    }
+</div>
