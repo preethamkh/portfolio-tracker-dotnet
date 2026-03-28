@@ -1,7 +1,7 @@
 @model PortfolioTracker.Web.Models.ViewModels.Holdings.CreateHoldingViewModel
 @{
-ViewData["Title"] = "Add Holding";
-Layout = "_Layout";
+    ViewData["Title"] = "Add Holding";
+    Layout = "_Layout";
 }
 
 <div class="max-w-lg">
@@ -10,9 +10,9 @@ Layout = "_Layout";
 
         @if (!ViewData.ModelState.IsValid)
         {
-        <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div asp-validation-summary="All" class="text-red-700 text-sm"></div>
-        </div>
+            <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+                <div asp-validation-summary="All" class="text-red-700 text-sm"></div>
+            </div>
         }
 
         <form asp-action="Create" method="post" class="space-y-5">
@@ -20,9 +20,8 @@ Layout = "_Layout";
 
             <div>
                 <label asp-for="SelectedPortfolioId" class="form-label">Portfolio</label>
-                <select asp-for="SelectedPortfolioId" asp-items="@(new SelectList(Model.AvailablePortfolios, "
-                    Id", "Name" ))" class="form-input">
-                    <option value="">— Select a portfolio —</option>
+                <select asp-for="SelectedPortfolioId" asp-items="@(new SelectList(Model.AvailablePortfolios, "Id", "Name"))" class="form-input">
+                    <option value="">-- Select a portfolio --</option>
                 </select>
                 <span asp-validation-for="SelectedPortfolioId" class="text-red-600 text-xs mt-1"></span>
             </div>
@@ -38,14 +37,12 @@ Layout = "_Layout";
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label asp-for="Quantity" class="form-label">Number of Shares</label>
-                    <input asp-for="Quantity" type="number" step="0.0001" min="0.0001" class="form-input"
-                        placeholder="10" />
+                    <input asp-for="Quantity" type="number" step="0.0001" min="0.0001" class="form-input" placeholder="10" />
                     <span asp-validation-for="Quantity" class="text-red-600 text-xs mt-1"></span>
                 </div>
                 <div>
                     <label asp-for="PurchasePrice" class="form-label">Price Per Share ($)</label>
-                    <input asp-for="PurchasePrice" type="number" step="0.01" min="0.01" class="form-input"
-                        placeholder="150.00" />
+                    <input asp-for="PurchasePrice" type="number" step="0.01" min="0.01" class="form-input" placeholder="150.00" />
                     <span asp-validation-for="PurchasePrice" class="text-red-600 text-xs mt-1"></span>
                 </div>
             </div>
@@ -66,5 +63,5 @@ Layout = "_Layout";
 </div>
 
 @section Scripts {
-@await Html.PartialAsync("_ValidationScripts")
+    @await Html.PartialAsync("_ValidationScripts")
 }
