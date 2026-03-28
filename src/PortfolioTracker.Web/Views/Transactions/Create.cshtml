@@ -1,0 +1,84 @@
+@model PortfolioTracker.Web.Models.ViewModels.Transactions.CreateTransactionViewModel
+@{
+ViewData["Title"] = $"Add Transaction — {Model.Symbol}";
+Layout = "_Layout";
+}
+
+<div class="max-w-lg">
+    <div class="card">
+        <h2 class="text-lg font-semibold text-gray-900 mb-1">Record a Transaction</h2>
+        <p class="text-sm text-gray-500 mb-6">for <strong class="text-blue-700">@Model.Symbol</strong></p>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+        <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div asp-validation-summary="All" class="text-red-700 text-sm"></div>
+        </div>
+        }
+
+        <form asp-action="Create" method="post" class="space-y-5">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="HoldingId" />
+            <input type="hidden" asp-for="Symbol" />
+
+            <div>
+                <label asp-for="TransactionType" class="form-label">Transaction Type</label>
+                <div class="flex gap-3">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" asp-for="TransactionType" value="Buy" class="text-blue-600" checked />
+                        <span class="text-sm font-medium text-green-700">Buy</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" asp-for="TransactionType" value="Sell" class="text-blue-600" />
+                        <span class="text-sm font-medium text-red-700">Sell</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label asp-for="Quantity" class="form-label">Shares</label>
+                    <input asp-for="Quantity" type="number" step="0.0001" min="0.0001" class="form-input"
+                        placeholder="10" />
+                    <span asp-validation-for="Quantity" class="text-red-600 text-xs mt-1"></span>
+                </div>
+                <div>
+                    <label asp-for="Price" class="form-label">Price Per Share ($)</label>
+                    <input asp-for="Price" type="number" step="0.01" min="0.01" class="form-input"
+                        placeholder="175.00" />
+                    <span asp-validation-for="Price" class="text-red-600 text-xs mt-1"></span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label asp-for="TransactionDate" class="form-label">Date</label>
+                    <input asp-for="TransactionDate" type="date" class="form-input" />
+                    <span asp-validation-for="TransactionDate" class="text-red-600 text-xs mt-1"></span>
+                </div>
+                <div>
+                    <label asp-for="Fees" class="form-label">Fees ($)</label>
+                    <input asp-for="Fees" type="number" step="0.01" min="0" class="form-input" placeholder="0.00" />
+                    <span asp-validation-for="Fees" class="text-red-600 text-xs mt-1"></span>
+                </div>
+            </div>
+
+            <div>
+                <label asp-for="Notes" class="form-label">Notes <span
+                        class="text-gray-400 font-normal">(optional)</span></label>
+                <textarea asp-for="Notes" rows="2" class="form-input"
+                    placeholder="e.g. Rebalancing, dividend reinvestment..."></textarea>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="btn-primary flex-1">Record Transaction</button>
+                <a asp-action="Index" asp-route-holdingId="@Model.HoldingId"
+                    class="btn-secondary flex-1 text-center">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+@await Html.PartialAsync("_ValidationScripts")
+}

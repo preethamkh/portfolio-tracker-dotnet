@@ -1,0 +1,70 @@
+@model PortfolioTracker.Web.Models.ViewModels.Holdings.CreateHoldingViewModel
+@{
+ViewData["Title"] = "Add Holding";
+Layout = "_Layout";
+}
+
+<div class="max-w-lg">
+    <div class="card">
+        <h2 class="text-lg font-semibold text-gray-900 mb-6">Add a New Holding</h2>
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+        <div class="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div asp-validation-summary="All" class="text-red-700 text-sm"></div>
+        </div>
+        }
+
+        <form asp-action="Create" method="post" class="space-y-5">
+            @Html.AntiForgeryToken()
+
+            <div>
+                <label asp-for="SelectedPortfolioId" class="form-label">Portfolio</label>
+                <select asp-for="SelectedPortfolioId" asp-items="@(new SelectList(Model.AvailablePortfolios, "
+                    Id", "Name" ))" class="form-input">
+                    <option value="">— Select a portfolio —</option>
+                </select>
+                <span asp-validation-for="SelectedPortfolioId" class="text-red-600 text-xs mt-1"></span>
+            </div>
+
+            <div>
+                <label asp-for="Symbol" class="form-label">Stock Symbol</label>
+                <input asp-for="Symbol" class="form-input uppercase" placeholder="AAPL"
+                    oninput="this.value = this.value.toUpperCase()" />
+                <p class="text-xs text-gray-400 mt-1">Enter the ticker symbol, e.g. AAPL, MSFT, TSLA</p>
+                <span asp-validation-for="Symbol" class="text-red-600 text-xs mt-1"></span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label asp-for="Quantity" class="form-label">Number of Shares</label>
+                    <input asp-for="Quantity" type="number" step="0.0001" min="0.0001" class="form-input"
+                        placeholder="10" />
+                    <span asp-validation-for="Quantity" class="text-red-600 text-xs mt-1"></span>
+                </div>
+                <div>
+                    <label asp-for="PurchasePrice" class="form-label">Price Per Share ($)</label>
+                    <input asp-for="PurchasePrice" type="number" step="0.01" min="0.01" class="form-input"
+                        placeholder="150.00" />
+                    <span asp-validation-for="PurchasePrice" class="text-red-600 text-xs mt-1"></span>
+                </div>
+            </div>
+
+            <div>
+                <label asp-for="PurchaseDate" class="form-label">Purchase Date</label>
+                <input asp-for="PurchaseDate" type="date" class="form-input" />
+                <span asp-validation-for="PurchaseDate" class="text-red-600 text-xs mt-1"></span>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button type="submit" class="btn-primary flex-1">Add Holding</button>
+                <a asp-controller="Portfolio" asp-action="Detail" asp-route-id="@Model.PortfolioId"
+                    class="btn-secondary flex-1 text-center">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+@await Html.PartialAsync("_ValidationScripts")
+}

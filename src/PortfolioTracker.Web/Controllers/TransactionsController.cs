@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PortfolioTracker.Web.Interfaces.Services;
 using PortfolioTracker.Web.Models.ViewModels.Transactions;
-using PortfolioTracker.Web.Services;
 
 namespace PortfolioTracker.Web.Controllers;
 

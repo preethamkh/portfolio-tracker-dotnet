@@ -1,0 +1,95 @@
+@model List<PortfolioTracker.Web.Models.ViewModels.Transactions.TransactionViewModel>
+    @{
+    ViewData["Title"] = $"Transactions — {ViewData["Symbol"]}";
+    Layout = "_Layout";
+    var holdingId = (int)ViewData["HoldingId"]!;
+    var portfolioId = (int?)ViewData["PortfolioId"];
+    }
+
+    <div class="mb-4 flex items-center gap-2 text-sm text-gray-500">
+        @if (portfolioId.HasValue)
+        {
+        <a asp-controller="Portfolio" asp-action="Detail" asp-route-id="@portfolioId" class="hover:text-blue-600">← Back
+            to Portfolio</a>
+        <span>›</span>
+        }
+        <span class="text-gray-800 font-medium">@ViewData["Symbol"] Transactions</span>
+    </div>
+
+    <div class="card">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-lg font-semibold text-gray-900">Transaction History</h2>
+            <a asp-action="Create" asp-route-holdingId="@holdingId" class="btn-primary text-sm">
+                + Add Transaction
+            </a>
+        </div>
+
+        @if (!Model.Any())
+        {
+        <div class="text-center py-10 text-gray-500">No transactions recorded yet.</div>
+        }
+        else
+        {
+        <!-- Summary Row -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-xs text-gray-500 mb-1">Total Invested</p>
+                <p class="text-lg font-bold text-gray-900">
+                    @Model.Where(t => t.TransactionType == "Buy").Sum(t => t.Total).ToString("C")
+                </p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-xs text-gray-500 mb-1">Total Sold</p>
+                <p class="text-lg font-bold text-gray-900">
+                    @Model.Where(t => t.TransactionType == "Sell").Sum(t => t.Total).ToString("C")
+                </p>
+            </div>
+            <div class="bg-gray-50 rounded-lg p-4">
+                <p class="text-xs text-gray-500 mb-1">Total Transactions</p>
+                <p class="text-lg font-bold text-gray-900">@Model.Count</p>
+            </div>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="table-header">Date</th>
+                        <th class="table-header">Type</th>
+                        <th class="table-header">Shares</th>
+                        <th class="table-header">Price</th>
+                        <th class="table-header">Total</th>
+                        <th class="table-header">Fees</th>
+                        <th class="table-header">Notes</th>
+                        <th class="table-header"></th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    @foreach (var t in Model.OrderByDescending(x => x.TransactionDate))
+                    {
+                    <tr class="hover:bg-gray-50">
+                        <td class="table-cell text-gray-500">@t.TransactionDate.ToString("MMM d, yyyy")</td>
+                        <td class="table-cell">
+                            <span class="@(t.TransactionType == " Buy" ? "badge-green" : "badge-red" )">
+                                @t.TransactionType
+                            </span>
+                        </td>
+                        <td class="table-cell">@t.Quantity.ToString("F4")</td>
+                        <td class="table-cell">@t.Price.ToString("C")</td>
+                        <td class="table-cell font-medium">@t.Total.ToString("C")</td>
+                        <td class="table-cell text-gray-500">@(t.Fees > 0 ? t.Fees.ToString("C") : "—")</td>
+                        <td class="table-cell text-gray-500 max-w-xs truncate">@(t.Notes ?? "—")</td>
+                        <td class="table-cell text-right">
+                            <form asp-action="Delete" asp-route-id="@t.Id" asp-route-holdingId="@holdingId"
+                                method="post" class="inline" onsubmit="return confirm('Delete this transaction?')">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="text-red-600 hover:underline text-sm">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+    </div>
