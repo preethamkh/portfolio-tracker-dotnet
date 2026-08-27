@@ -25,6 +25,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\PortfolioTracker.API\PortfolioTracker.API.csproj" />
     <ProjectReference Include="..\..\src\PortfolioTracker.Core\PortfolioTracker.Core.csproj" />
+    <ProjectReference Include="..\..\BlazorFrontend\BlazorFrontend.csproj" />
   </ItemGroup>
 
   <ItemGroup>
