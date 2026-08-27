@@ -1,0 +1,14 @@
+{
+  "name": "portfolio-tracker-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Playwright E2E tests for the Blazor frontend",
+  "scripts": {
+    "test": "playwright test",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.45.0",
+    "typescript": "^5.4.0"
+  }
+}

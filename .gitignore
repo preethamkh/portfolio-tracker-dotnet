@@ -475,3 +475,8 @@ Desktop.ini
 /brainstorming-ideas/GraphQL.pdf
 /brainstorming-ideas/STAR-Interviews.pdf
 /brainstorming-ideas/VercelRailwayConnectivityFixed.pdf
+
+# Playwright E2E artifacts
+test-results/
+playwright-report/
+
