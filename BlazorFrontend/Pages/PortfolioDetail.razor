@@ -1,0 +1,552 @@
+@page "/portfolios/{PortfolioId:guid}"
+@attribute [Authorize]
+
+<PageTitle>@(Portfolio?.Name ?? "Portfolio") - Portfolio Tracker</PageTitle>
+
+@if (_isLoading)
+{
+    <p class="text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading portfolio...</p>
+}
+else if (Portfolio is null)
+{
+    <div class="alert alert-warning" role="alert">
+        Portfolio not found.
+        <NavLink href="portfolios" class="alert-link">Back to portfolios</NavLink>
+    </div>
+}
+else
+{
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><NavLink href="portfolios">Portfolios</NavLink></li>
+            <li class="breadcrumb-item active">@Portfolio.Name</li>
+        </ol>
+    </nav>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h1 class="h3 mb-0">@Portfolio.Name</h1>
+        <div>
+            <button type="button" class="btn btn-outline-primary" @onclick="OpenAddHoldingModal">+ Add holding</button>
+            <button type="button" class="btn btn-primary" @onclick="OpenAddTransactionModal">+ Record transaction</button>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Portfolio.Description))
+    {
+        <p class="text-muted">@Portfolio.Description</p>
+    }
+
+    @if (_pageError is not null)
+    {
+        <div class="alert alert-danger" role="alert">@_pageError</div>
+    }
+
+    <!-- Portfolio value computed from holdings' current valuations -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="text-muted small">Market value</div>
+                <div class="fs-4 fw-semibold">@FormatMoney(TotalMarketValue)</div>
+            </div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="text-muted small">Cost basis</div>
+                <div class="fs-4 fw-semibold">@FormatMoney(TotalCostBasis)</div>
+            </div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="text-muted small">Unrealized gain / loss</div>
+                <div class="fs-4 fw-semibold @GainLossClass(TotalGainLoss)">@FormatSignedMoney(TotalGainLoss)</div>
+            </div></div>
+        </div>
+        <div class="col-md-3">
+            <div class="card h-100"><div class="card-body">
+                <div class="text-muted small">Return</div>
+                <div class="fs-4 fw-semibold @GainLossClass(TotalGainLoss)">@FormatPercent(TotalGainLossPercent)</div>
+            </div></div>
+        </div>
+    </div>
+
+    <!-- Holdings -->
+    <h2 class="h5 mb-2">Holdings</h2>
+    @if (Holdings.Count == 0)
+    {
+        <p class="text-muted">No holdings yet. Use "Add holding" to record your first position.</p>
+    }
+    else
+    {
+        <div class="table-responsive mb-4">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Symbol</th>
+                        <th>Security</th>
+                        <th class="text-end">Shares</th>
+                        <th class="text-end">Avg cost</th>
+                        <th class="text-end">Price</th>
+                        <th class="text-end">Value</th>
+                        <th class="text-end">Gain / loss</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var holding in Holdings)
+                    {
+                        <tr>
+                            <td class="fw-semibold">@holding.Symbol</td>
+                            <td>@holding.SecurityName</td>
+                            <td class="text-end">@holding.TotalShares.ToString("0.####")</td>
+                            <td class="text-end">@FormatMoney(holding.AverageCost ?? 0)</td>
+                            <td class="text-end">@FormatMoney(holding.CurrentPrice ?? 0)</td>
+                            <td class="text-end">@FormatMoney(holding.CurrentValue ?? 0)</td>
+                            <td class="text-end @GainLossClass(holding.UnrealizedGainLoss ?? 0)">
+                                @FormatSignedMoney(holding.UnrealizedGainLoss ?? 0)
+                                <span class="small">(@FormatPercent(holding.UnrealizedGainLossPercent ?? 0))</span>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <!-- Transactions -->
+    <h2 class="h5 mb-2">Transactions</h2>
+    @if (Transactions.Count == 0)
+    {
+        <p class="text-muted">No transactions recorded yet.</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Symbol</th>
+                        <th class="text-end">Shares</th>
+                        <th class="text-end">Price</th>
+                        <th class="text-end">Fees</th>
+                        <th class="text-end">Total</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var transaction in Transactions.OrderByDescending(t => t.TransactionDate))
+                    {
+                        <tr>
+                            <td>@transaction.TransactionDate.ToString("d MMM yyyy")</td>
+                            <td>
+                                <span class="badge @(transaction.TransactionType == TransactionType.Buy ? "text-bg-success" : "text-bg-warning")">
+                                    @transaction.TransactionType
+                                </span>
+                            </td>
+                            <td>@transaction.Symbol</td>
+                            <td class="text-end">@transaction.Shares.ToString("0.####")</td>
+                            <td class="text-end">@FormatMoney(transaction.PricePerShare)</td>
+                            <td class="text-end">@FormatMoney(transaction.Fees)</td>
+                            <td class="text-end">@FormatMoney(transaction.TotalAmount)</td>
+                            <td class="text-end">
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        @onclick="() => DeleteTransactionAsync(transaction)">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+    <!-- Add holding modal: search security, then create the position -->
+    @if (_showAddHolding)
+    {
+        <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.4);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Add holding</h5>
+                        <button type="button" class="btn-close" @onclick="CloseAddHoldingModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (_modalError is not null)
+                        {
+                            <div class="alert alert-danger py-2" role="alert">@_modalError</div>
+                        }
+
+                        <div class="mb-3">
+                            <label class="form-label" for="search">Search security</label>
+                            <div class="input-group">
+                                <input type="text" id="search" class="form-control" @bind="_searchQuery"
+                                       placeholder="e.g. AAPL" @bind:after="SearchSecuritiesAsync" />
+                                <button type="button" class="btn btn-outline-secondary" @onclick="SearchSecuritiesAsync">Search</button>
+                            </div>
+                            <div class="form-text">If the security isn't in the database yet, it will be fetched from the market data provider.</div>
+                        </div>
+
+                        @if (_searchResults.Count > 0)
+                        {
+                            <div class="list-group mb-3" style="max-height: 200px; overflow-y: auto;">
+                                @foreach (var security in _searchResults)
+                                {
+                                    <button type="button"
+                                            class="list-group-item list-group-item-action @(security.Id == _selectedSecurityId ? "active" : "")"
+                                            @onclick="() => _selectedSecurityId = security.Id">
+                                        <strong>@security.Symbol</strong> - @security.Name
+                                        <span class="small d-block">@security.Exchange (@security.SecurityType)</span>
+                                    </button>
+                                }
+                            </div>
+                        }
+
+                        <EditForm Model="_holdingForm" OnValidSubmit="SaveHoldingAsync" FormName="addHolding">
+                            <DataAnnotationsValidator />
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label" for="shares">Shares</label>
+                                    <InputNumber @bind-Value="_holdingForm.TotalShares" id="shares" class="form-control" />
+                                    <ValidationMessage For="() => _holdingForm.TotalShares" class="text-danger small" />
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label class="form-label" for="avgCost">Average cost</label>
+                                    <InputNumber @bind-Value="_holdingForm.AverageCost" id="avgCost" class="form-control" />
+                                    <ValidationMessage For="() => _holdingForm.AverageCost" class="text-danger small" />
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" disabled="@(_isSaving || _selectedSecurityId is null)">
+                                Add holding
+                            </button>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Record transaction modal -->
+    @if (_showAddTransaction)
+    {
+        <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.4);">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Record transaction</h5>
+                        <button type="button" class="btn-close" @onclick="CloseAddTransactionModal"></button>
+                    </div>
+                    <div class="modal-body">
+                        @if (_modalError is not null)
+                        {
+                            <div class="alert alert-danger py-2" role="alert">@_modalError</div>
+                        }
+
+                        <EditForm Model="_transactionForm" OnValidSubmit="SaveTransactionAsync" FormName="addTransaction">
+                            <DataAnnotationsValidator />
+                            <div class="mb-3">
+                                <label class="form-label" for="holding">Holding</label>
+                                <select id="holding" class="form-select" @bind="_transactionForm.HoldingId">
+                                    <option value="">Select a holding...</option>
+                                    @foreach (var holding in Holdings)
+                                    {
+                                        <option value="@holding.HoldingId">@holding.Symbol (@holding.TotalShares shares)</option>
+                                    }
+                                </select>
+                            </div>
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label">Type</label>
+                                    <select class="form-select" @bind="_transactionForm.TransactionType">
+                                        <option value="@TransactionType.Buy">Buy</option>
+                                        <option value="@TransactionType.Sell">Sell</option>
+                                    </select>
+                                </div>
+                                <div class="col-6 mb-3">
+                                    <label class="form-label" for="tshares">Shares</label>
+                                    <InputNumber @bind-Value="_transactionForm.Shares" id="tshares" class="form-control" />
+                                    <ValidationMessage For="() => _transactionForm.Shares" class="text-danger small" />
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-4 mb-3">
+                                    <label class="form-label" for="tprice">Price / share</label>
+                                    <InputNumber @bind-Value="_transactionForm.PricePerShare" id="tprice" class="form-control" />
+                                    <ValidationMessage For="() => _transactionForm.PricePerShare" class="text-danger small" />
+                                </div>
+                                <div class="col-4 mb-3">
+                                    <label class="form-label" for="tfees">Fees</label>
+                                    <InputNumber @bind-Value="_transactionForm.Fees" id="tfees" class="form-control" />
+                                </div>
+                                <div class="col-4 mb-3">
+                                    <label class="form-label" for="tdate">Date</label>
+                                    <InputDate @bind-Value="_transactionForm.TransactionDate" id="tdate" class="form-control" />
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="tnotes">Notes (optional)</label>
+                                <InputTextArea @bind-Value="_transactionForm.Notes" id="tnotes" class="form-control" rows="2" />
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100" disabled="@_isSaving">
+                                Record transaction
+                            </button>
+                        </EditForm>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@code {
+    private bool _isLoading = true;
+    private string? _pageError;
+    private string? _modalError;
+    private bool _isSaving;
+
+    private Portfolio? Portfolio { get; set; }
+    private List<Holding> Holdings { get; set; } = [];
+    private List<Transaction> Transactions { get; set; } = [];
+
+    // Add-holding modal state
+    private bool _showAddHolding;
+    private string _searchQuery = string.Empty;
+    private List<Security> _searchResults = [];
+    private Guid? _selectedSecurityId;
+    private HoldingForm _holdingForm = new();
+
+    // Add-transaction modal state
+    private bool _showAddTransaction;
+    private TransactionForm _transactionForm = new();
+
+    [Parameter] public Guid PortfolioId { get; set; }
+
+    [Inject] private IPortfolioService PortfolioService { get; set; } = default!;
+    [Inject] private IHoldingService HoldingService { get; set; } = default!;
+    [Inject] private ITransactionService TransactionService { get; set; } = default!;
+    [Inject] private ISecurityService SecurityService { get; set; } = default!;
+
+    // Portfolio totals from holdings' server-side valuations
+    private decimal TotalMarketValue => Holdings.Sum(h => h.CurrentValue ?? 0);
+    private decimal TotalCostBasis => Holdings.Sum(h => h.TotalCost ?? 0);
+    private decimal TotalGainLoss => TotalMarketValue - TotalCostBasis;
+    private decimal TotalGainLossPercent => TotalCostBasis != 0
+        ? TotalGainLoss / TotalCostBasis * 100
+        : 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPortfolioAsync();
+        _isLoading = false;
+    }
+
+    /// <summary>Loads the portfolio, its holdings and its transactions.</summary>
+    private async Task LoadPortfolioAsync()
+    {
+        var portfolioResult = await PortfolioService.GetPortfolioAsync(PortfolioId);
+        if (!portfolioResult.IsSuccess)
+        {
+            _pageError = portfolioResult.Error;
+            return;
+        }
+
+        Portfolio = portfolioResult.Value;
+
+        await ReloadHoldingsAsync();
+        await ReloadTransactionsAsync();
+        _pageError = null;
+    }
+
+    private async Task ReloadHoldingsAsync()
+    {
+        var result = await HoldingService.GetHoldingsAsync(PortfolioId);
+        if (result.IsSuccess)
+        {
+            Holdings = result.Value!;
+        }
+        else
+        {
+            _pageError = result.Error;
+        }
+    }
+
+    private async Task ReloadTransactionsAsync()
+    {
+        var result = await TransactionService.GetPortfolioTransactionsAsync(PortfolioId);
+        if (result.IsSuccess)
+        {
+            Transactions = result.Value!;
+        }
+        else
+        {
+            _pageError = result.Error;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Add holding flow
+    // ------------------------------------------------------------------
+
+    private void OpenAddHoldingModal()
+    {
+        _showAddHolding = true;
+        _modalError = null;
+        _searchResults = [];
+        _selectedSecurityId = null;
+        _searchQuery = string.Empty;
+        _holdingForm = new HoldingForm();
+    }
+
+    private void CloseAddHoldingModal() => _showAddHolding = false;
+
+    private async Task SearchSecuritiesAsync()
+    {
+        var result = await SecurityService.SearchSecuritiesAsync(_searchQuery);
+
+        if (result.IsSuccess)
+        {
+            _searchResults = result.Value!;
+            _selectedSecurityId = null;
+        }
+        else
+        {
+            _modalError = result.Error;
+        }
+    }
+
+    private async Task SaveHoldingAsync()
+    {
+        if (_selectedSecurityId is null)
+        {
+            _modalError = "Please search for and select a security first.";
+            return;
+        }
+
+        _isSaving = true;
+        _modalError = null;
+
+        var result = await HoldingService.CreateHoldingAsync(PortfolioId, new CreateHoldingRequest
+        {
+            SecurityId = _selectedSecurityId.Value,
+            TotalShares = _holdingForm.TotalShares,
+            AverageCost = _holdingForm.AverageCost
+        });
+
+        if (result.IsSuccess)
+        {
+            _showAddHolding = false;
+            await ReloadHoldingsAsync();
+        }
+        else
+        {
+            _modalError = result.Error;
+        }
+
+        _isSaving = false;
+    }
+
+    // ------------------------------------------------------------------
+    // Transactions
+    // ------------------------------------------------------------------
+
+    private void OpenAddTransactionModal()
+    {
+        _showAddTransaction = true;
+        _modalError = null;
+        _transactionForm = new TransactionForm { TransactionDate = DateTime.Today };
+    }
+
+    private void CloseAddTransactionModal() => _showAddTransaction = false;
+
+    private async Task SaveTransactionAsync()
+    {
+        if (_transactionForm.HoldingId == Guid.Empty)
+        {
+            _modalError = "Please select a holding.";
+            return;
+        }
+
+        _isSaving = true;
+        _modalError = null;
+
+        var result = await TransactionService.CreateTransactionAsync(PortfolioId, new CreateTransactionRequest
+        {
+            HoldingId = _transactionForm.HoldingId,
+            TransactionType = _transactionForm.TransactionType,
+            Shares = _transactionForm.Shares,
+            PricePerShare = _transactionForm.PricePerShare,
+            Fees = _transactionForm.Fees,
+            TransactionDate = _transactionForm.TransactionDate,
+            Notes = string.IsNullOrWhiteSpace(_transactionForm.Notes) ? null : _transactionForm.Notes
+        });
+
+        if (result.IsSuccess)
+        {
+            _showAddTransaction = false;
+            // Transactions recalculate holding positions - refresh both
+            await ReloadHoldingsAsync();
+            await ReloadTransactionsAsync();
+        }
+        else
+        {
+            _modalError = result.Error;
+        }
+
+        _isSaving = false;
+    }
+
+    private async Task DeleteTransactionAsync(Transaction transaction)
+    {
+        var result = await TransactionService.DeleteTransactionAsync(transaction.Id);
+
+        if (result.IsSuccess)
+        {
+            await ReloadHoldingsAsync();
+            await ReloadTransactionsAsync();
+        }
+        else
+        {
+            _pageError = result.Error;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // Formatting helpers
+    // ------------------------------------------------------------------
+
+    private static string FormatMoney(decimal value) => value.ToString("N2");
+    private static string FormatSignedMoney(decimal value) => (value >= 0 ? "+" : "") + value.ToString("N2");
+    private static string FormatPercent(decimal value) => (value >= 0 ? "+" : "") + value.ToString("0.00") + "%";
+    private static string GainLossClass(decimal value) => value >= 0 ? "text-gain" : "text-loss";
+
+    /// <summary>Form models with client-side validation.</summary>
+    private sealed class HoldingForm
+    {
+        [System.ComponentModel.DataAnnotations.Range(0.0001, double.MaxValue,
+            ErrorMessage = "Shares must be greater than zero")]
+        public decimal TotalShares { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Range(0, double.MaxValue,
+            ErrorMessage = "Average cost cannot be negative")]
+        public decimal? AverageCost { get; set; }
+    }
+
+    private sealed class TransactionForm
+    {
+        public Guid HoldingId { get; set; }
+        public TransactionType TransactionType { get; set; } = TransactionType.Buy;
+
+        [System.ComponentModel.DataAnnotations.Range(0.0001, double.MaxValue,
+            ErrorMessage = "Shares must be greater than zero")]
+        public decimal Shares { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Range(0.0001, double.MaxValue,
+            ErrorMessage = "Price must be greater than zero")]
+        public decimal PricePerShare { get; set; }
+
+        [System.ComponentModel.DataAnnotations.Range(0, double.MaxValue,
+            ErrorMessage = "Fees cannot be negative")]
+        public decimal Fees { get; set; }
+
+        public DateTime TransactionDate { get; set; } = DateTime.Today;
+        public string? Notes { get; set; }
+    }
+}

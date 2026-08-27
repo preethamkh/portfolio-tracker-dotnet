@@ -1,0 +1,27 @@
+﻿<!--
+  Root component: hosts the router and applies authorization globally.
+  Every page not marked [AllowAnonymous] requires an authenticated user.
+-->
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+            <NotAuthorized>
+                <RedirectToLogin />
+            </NotAuthorized>
+            <Authorizing>
+                <p class="text-muted">Checking your session...</p>
+            </Authorizing>
+        </AuthorizeRouteView>
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <PageTitle>Page not found</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <div class="text-center py-5">
+                <h1>404</h1>
+                <p class="text-muted">Sorry, there's nothing at this address.</p>
+                <NavLink href="/" class="btn btn-primary">Back to dashboard</NavLink>
+            </div>
+        </LayoutView>
+    </NotFound>
+</Router>

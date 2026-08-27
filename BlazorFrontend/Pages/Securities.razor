@@ -1,0 +1,89 @@
+@page "/securities"
+@attribute [Authorize]
+
+<PageTitle>Search securities - Portfolio Tracker</PageTitle>
+
+<h1>Search securities</h1>
+<p class="text-muted">Look up stocks and ETFs. Results come from the market data provider and the local database.</p>
+
+<div class="input-group mb-3" style="max-width: 480px;">
+    <input type="text" class="form-control" placeholder="Search by symbol or name (e.g. AAPL, Apple)"
+           @bind="_query" @bind:after="SearchAsync" />
+    <button type="button" class="btn btn-primary" @onclick="SearchAsync">Search</button>
+</div>
+
+@if (_isSearching)
+{
+    <p class="text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Searching...</p>
+}
+else if (_error is not null)
+{
+    <div class="alert alert-danger" role="alert">@_error</div>
+}
+else if (_results.Count > 0)
+{
+    <div class="table-responsive" style="max-width: 720px;">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Name</th>
+                    <th>Exchange</th>
+                    <th>Type</th>
+                    <th>Sector</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var security in _results)
+                {
+                    <tr>
+                        <td class="fw-semibold">@security.Symbol</td>
+                        <td>@security.Name</td>
+                        <td>@security.Exchange</td>
+                        <td><span class="badge text-bg-light">@security.SecurityType</span></td>
+                        <td>@security.Sector</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else if (_hasSearched)
+{
+    <p class="text-muted">No securities matched your search.</p>
+}
+
+@code {
+    private string _query = string.Empty;
+    private List<Security> _results = [];
+    private bool _isSearching;
+    private bool _hasSearched;
+    private string? _error;
+
+    [Inject] private ISecurityService SecurityService { get; set; } = default!;
+
+    private async Task SearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_query))
+        {
+            return;
+        }
+
+        _isSearching = true;
+        _error = null;
+
+        var result = await SecurityService.SearchSecuritiesAsync(_query);
+
+        if (result.IsSuccess)
+        {
+            _results = result.Value!;
+        }
+        else
+        {
+            _error = result.Error;
+        }
+
+        _hasSearched = true;
+        _isSearching = false;
+    }
+}

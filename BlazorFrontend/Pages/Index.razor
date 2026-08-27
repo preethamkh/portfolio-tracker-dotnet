@@ -1,0 +1,99 @@
+@page "/"
+@attribute [Authorize]
+
+<PageTitle>Dashboard - Portfolio Tracker</PageTitle>
+
+<h1>Dashboard</h1>
+<p class="text-muted">Welcome back@(AuthService.CurrentUser?.FullName is { Length: > 0 } name ? $", {name}" : "")!</p>
+
+@if (_isLoading)
+{
+    <p class="text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading your portfolios...</p>
+}
+else if (_error is not null)
+{
+    <div class="alert alert-danger" role="alert">@_error</div>
+}
+else if (PortfolioList.Count == 0)
+{
+    <div class="text-center py-5">
+        <p class="text-muted">You don't have any portfolios yet.</p>
+        <NavLink href="portfolios" class="btn btn-primary">Create your first portfolio</NavLink>
+    </div>
+}
+else
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="text-muted small">Total portfolios</div>
+            <div class="fs-3 fw-semibold">@PortfolioList.Count</div>
+            <div class="text-muted small">@PortfolioList.Sum(p => p.HoldingsCount) holdings in total</div>
+        </div>
+    </div>
+
+    <h2 class="h5 mb-3">Your portfolios</h2>
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Currency</th>
+                    <th class="text-end">Holdings</th>
+                    <th class="text-end">Created</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var portfolio in PortfolioList)
+                {
+                    <tr>
+                        <td>
+                            <strong>@portfolio.Name</strong>
+                            @if (portfolio.IsDefault)
+                            {
+                                <span class="badge text-bg-secondary ms-1">default</span>
+                            }
+                            @if (!string.IsNullOrEmpty(portfolio.Description))
+                            {
+                                <div class="text-muted small">@portfolio.Description</div>
+                            }
+                        </td>
+                        <td>@portfolio.Currency</td>
+                        <td class="text-end">@portfolio.HoldingsCount</td>
+                        <td class="text-end">@portfolio.CreatedAt.ToString("d MMM yyyy")</td>
+                        <td class="text-end">
+                            <NavLink href="@GetPortfolioUrl(portfolio.Id)" class="btn btn-sm btn-outline-primary">View</NavLink>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string? _error;
+    private List<Portfolio> PortfolioList { get; set; } = [];
+
+    [Inject] private IAuthService AuthService { get; set; } = default!;
+    [Inject] private IPortfolioService PortfolioService { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await PortfolioService.GetPortfoliosAsync();
+
+        if (result.IsSuccess)
+        {
+            PortfolioList = result.Value!;
+        }
+        else
+        {
+            _error = result.Error;
+        }
+
+        _isLoading = false;
+    }
+
+    private static string GetPortfolioUrl(Guid id) => $"portfolios/{id}";
+}

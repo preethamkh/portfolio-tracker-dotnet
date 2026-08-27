@@ -1,0 +1,318 @@
+@page "/portfolios"
+@attribute [Authorize]
+
+<PageTitle>Portfolios - Portfolio Tracker</PageTitle>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Portfolios</h1>
+    <button type="button" class="btn btn-primary" @onclick="() => OpenCreateModal()">+ New portfolio</button>
+</div>
+
+@if (_isLoading)
+{
+    <p class="text-muted"><span class="spinner-border spinner-border-sm me-2"></span>Loading...</p>
+}
+else if (_error is not null)
+{
+    <div class="alert alert-danger" role="alert">@_error</div>
+}
+else if (PortfolioList.Count == 0)
+{
+    <div class="text-center py-5 text-muted">
+        <p>No portfolios yet. Create one to start tracking investments.</p>
+    </div>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Currency</th>
+                    <th class="text-end">Holdings</th>
+                    <th class="text-end">Created</th>
+                    <th class="text-end">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var portfolio in PortfolioList)
+                {
+                    <tr>
+                        <td>
+                            <NavLink href="@GetPortfolioUrl(portfolio.Id)" class="fw-semibold text-decoration-none">
+                                @portfolio.Name
+                            </NavLink>
+                            @if (portfolio.IsDefault)
+                            {
+                                <span class="badge text-bg-secondary ms-1">default</span>
+                            }
+                            @if (!string.IsNullOrEmpty(portfolio.Description))
+                            {
+                                <div class="text-muted small">@portfolio.Description</div>
+                            }
+                        </td>
+                        <td>@portfolio.Currency</td>
+                        <td class="text-end">@portfolio.HoldingsCount</td>
+                        <td class="text-end">@portfolio.CreatedAt.ToString("d MMM yyyy")</td>
+                        <td class="text-end">
+                            @if (!portfolio.IsDefault)
+                            {
+                                <button type="button" class="btn btn-sm btn-outline-secondary me-1"
+                                        @onclick="() => SetDefaultAsync(portfolio)" title="Set as default">
+                                    ★
+                                </button>
+                            }
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-1"
+                                    @onclick="() => OpenEditModal(portfolio)">Edit</button>
+                            <button type="button" class="btn btn-sm btn-outline-danger"
+                                    @onclick="() => RequestDeleteAsync(portfolio)">Delete</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<!-- Create / edit modal -->
+@if (_showEditor)
+{
+    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.4);">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">@(_editingId is null ? "New portfolio" : "Edit portfolio")</h5>
+                    <button type="button" class="btn-close" @onclick="CloseEditor"></button>
+                </div>
+                <EditForm Model="_editorModel" OnValidSubmit="SaveAsync">
+                    <DataAnnotationsValidator />
+                    <div class="modal-body">
+                        @if (_editorError is not null)
+                        {
+                            <div class="alert alert-danger py-2" role="alert">@_editorError</div>
+                        }
+                        <div class="mb-3">
+                            <label class="form-label" for="name">Name</label>
+                            <InputText @bind-Value="_editorModel.Name" id="name" class="form-control" />
+                            <ValidationMessage For="() => _editorModel.Name" class="text-danger small" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="description">Description</label>
+                            <InputTextArea @bind-Value="_editorModel.Description" id="description" class="form-control" rows="2" />
+                            <ValidationMessage For="() => _editorModel.Description" class="text-danger small" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="currency">Currency</label>
+                            <InputText @bind-Value="_editorModel.Currency" id="currency" class="form-control" maxlength="3" />
+                            <div class="form-text">3-letter code, e.g. AUD or USD</div>
+                            <ValidationMessage For="() => _editorModel.Currency" class="text-danger small" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" @onclick="CloseEditor">Cancel</button>
+                        <button type="submit" class="btn btn-primary" disabled="@_isSaving">Save</button>
+                    </div>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Delete confirmation -->
+@if (_pendingDelete is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background: rgba(0,0,0,.4);">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete portfolio</h5>
+                    <button type="button" class="btn-close" @onclick="() => _pendingDelete = null"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Delete <strong>@_pendingDelete.Name</strong>? This cannot be undone.</p>
+                    @if (_deleteError is not null)
+                    {
+                        <div class="alert alert-danger py-2" role="alert">@_deleteError</div>
+                    }
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" @onclick="() => _pendingDelete = null">Cancel</button>
+                    <button type="button" class="btn btn-danger" @onclick="ConfirmDeleteAsync" disabled="@_isDeleting">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool _isLoading = true;
+    private string? _error;
+    private List<Portfolio> PortfolioList { get; set; } = [];
+
+    // Editor state
+    private bool _showEditor;
+    private bool _isSaving;
+    private Guid? _editingId;
+    private string? _editorError;
+    private PortfolioForm _editorModel = new();
+
+    // Delete confirmation state
+    private Portfolio? _pendingDelete;
+    private bool _isDeleting;
+    private string? _deleteError;
+
+    [Inject] private IPortfolioService PortfolioService { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var result = await PortfolioService.GetPortfoliosAsync();
+
+        if (result.IsSuccess)
+        {
+            PortfolioList = result.Value!;
+        }
+        else
+        {
+            _error = result.Error;
+        }
+
+        _isLoading = false;
+    }
+
+    // ------------------------------------------------------------------
+    // Modal handlers
+    // ------------------------------------------------------------------
+
+    private void OpenCreateModal()
+    {
+        _editingId = null;
+        _editorError = null;
+        _editorModel = new PortfolioForm();
+        _showEditor = true;
+    }
+
+    private void OpenEditModal(Portfolio portfolio)
+    {
+        _editingId = portfolio.Id;
+        _editorError = null;
+        _editorModel = new PortfolioForm
+        {
+            Name = portfolio.Name,
+            Description = portfolio.Description ?? string.Empty,
+            Currency = portfolio.Currency
+        };
+        _showEditor = true;
+    }
+
+    private void CloseEditor() => _showEditor = false;
+
+    private async Task SaveAsync()
+    {
+        _isSaving = true;
+        _editorError = null;
+
+        var request = new UpdatePortfolioRequest
+        {
+            Name = _editorModel.Name,
+            Description = string.IsNullOrWhiteSpace(_editorModel.Description) ? null : _editorModel.Description,
+            Currency = _editorModel.Currency
+        };
+
+        var result = _editingId is null
+            ? await PortfolioService.CreatePortfolioAsync(new CreatePortfolioRequest
+            {
+                Name = request.Name!,
+                Description = request.Description,
+                Currency = request.Currency!
+            })
+            : await PortfolioService.UpdatePortfolioAsync(_editingId.Value, request);
+
+        if (result.IsSuccess)
+        {
+            _showEditor = false;
+            await ReloadAsync();
+        }
+        else
+        {
+            _editorError = result.Error;
+        }
+
+        _isSaving = false;
+    }
+
+    private void RequestDeleteAsync(Portfolio portfolio)
+    {
+        _pendingDelete = portfolio;
+        _deleteError = null;
+    }
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (_pendingDelete is null)
+        {
+            return;
+        }
+
+        _isDeleting = true;
+        var result = await PortfolioService.DeletePortfolioAsync(_pendingDelete.Id);
+
+        if (result.IsSuccess)
+        {
+            _pendingDelete = null;
+            await ReloadAsync();
+        }
+        else
+        {
+            _deleteError = result.Error;
+        }
+
+        _isDeleting = false;
+    }
+
+    private async Task SetDefaultAsync(Portfolio portfolio)
+    {
+        var result = await PortfolioService.SetDefaultPortfolioAsync(portfolio.Id);
+
+        if (result.IsSuccess)
+        {
+            await ReloadAsync();
+        }
+        else
+        {
+            _error = result.Error;
+        }
+    }
+
+    private async Task ReloadAsync()
+    {
+        var result = await PortfolioService.GetPortfoliosAsync();
+        if (result.IsSuccess)
+        {
+            PortfolioList = result.Value!;
+            _error = null;
+        }
+        else
+        {
+            _error = result.Error;
+        }
+    }
+
+    private static string GetPortfolioUrl(Guid id) => $"portfolios/{id}";
+
+    /// <summary>Editor form model with client-side validation rules.</summary>
+    private sealed class PortfolioForm
+    {
+        [System.ComponentModel.DataAnnotations.Required(ErrorMessage = "Name is required")]
+        [System.ComponentModel.DataAnnotations.MaxLength(255)]
+        public string Name { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.MaxLength(1000)]
+        public string Description { get; set; } = string.Empty;
+
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.RegularExpression("^[A-Z]{3}$",
+            ErrorMessage = "Use a 3-letter code, e.g. AUD")]
+        public string Currency { get; set; } = "AUD";
+    }
+}
