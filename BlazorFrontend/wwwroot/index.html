@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Portfolio Tracker</title>
+    <base href="/" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <style>
+        /* Custom status colors reused across pages */
+        .text-gain { color: #198754; }
+        .text-loss { color: #dc3545; }
+    </style>
+    <HeadOutlet />
+</head>
+
+<body>
+    <div id="app">Loading...</div>
+
+    <div id="blazor-error-ui" data-nosnippet style="display:none; background:#ffffe0; bottom:0; box-shadow:0 -1px 2px rgba(0,0,0,.2); left:0; padding:.6rem 1.25rem .7rem; position:fixed; width:100%; z-index:1000;">
+        An unhandled error has occurred.
+        <a href="." class="reload">Reload</a>
+        <a style="cursor:pointer; float:right; font-weight:700;" class="dismiss">🗙</a>
+    </div>
+
+    <script src="_framework/blazor.webassembly.js"></script>
+</body>
+
+</html>
